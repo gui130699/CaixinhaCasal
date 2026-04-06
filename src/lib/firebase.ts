@@ -4,13 +4,13 @@ import { getFirestore } from 'firebase/firestore'
 import { getStorage } from 'firebase/storage'
 
 const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
-  appId: import.meta.env.VITE_FIREBASE_APP_ID,
-  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID,
+  apiKey: 'AIzaSyB8x4jO56mL_AF2qnlmatTL7Y2cdj24028',
+  authDomain: 'caixinha-casal.firebaseapp.com',
+  projectId: 'caixinha-casal',
+  storageBucket: 'caixinha-casal.firebasestorage.app',
+  messagingSenderId: '1083587518314',
+  appId: '1:1083587518314:web:8344058a7b3dc6fd668f13',
+  measurementId: 'G-GXTGC793HK',
 }
 
 export const app = initializeApp(firebaseConfig)
