@@ -38,12 +38,13 @@ export default function ReportsPage() {
 
   const transactions = txData?.data ?? []
 
+  const incomingTypes = ['deposit', 'extra_deposit', 'interest', 'transfer_in']
   // Monthly aggregation
   const monthlyMap: Record<string, { entradas: number; saidas: number; mes: string }> = {}
   transactions.forEach(tx => {
-    const key = tx.date.slice(0, 7)
+    const key = tx.transaction_date.slice(0, 7)
     if (!monthlyMap[key]) monthlyMap[key] = { mes: key, entradas: 0, saidas: 0 }
-    if (tx.type === 'income') monthlyMap[key].entradas += tx.amount
+    if (incomingTypes.includes(tx.type)) monthlyMap[key].entradas += tx.amount
     else monthlyMap[key].saidas += tx.amount
   })
   const monthlyData = Object.values(monthlyMap).sort((a, b) => a.mes.localeCompare(b.mes)).slice(-12)
@@ -64,7 +65,7 @@ export default function ReportsPage() {
   const totalSaved = goals.reduce((s, g) => s + g.current_balance, 0)
   const totalTarget = goals.reduce((s, g) => s + g.target_amount, 0)
   const totalPaid = installments.filter(i => i.status === 'paid').reduce((s, i) => s + i.paid_amount, 0)
-  const totalIncome = transactions.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0)
+  const totalIncome = transactions.filter(t => incomingTypes.includes(t.type)).reduce((s, t) => s + t.amount, 0)
 
   return (
     <div className="space-y-6">
@@ -73,7 +74,7 @@ export default function ReportsPage() {
           <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Relatórios</h1>
           <p className="text-sm text-gray-500 dark:text-gray-400">Visão geral financeira da família</p>
         </div>
-        <Button variant="secondary" icon={<Download className="size-4" />} onClick={() => window.print()}>Exportar</Button>
+        <Button variant="secondary" leftIcon={<Download className="size-4" />} onClick={() => window.print()}>Exportar</Button>
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">

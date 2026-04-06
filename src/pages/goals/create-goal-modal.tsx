@@ -42,7 +42,6 @@ export function CreateGoalModal({ open, onClose, onSuccess }: Props) {
   } = useForm<CreateGoalFormData>({
     resolver: zodResolver(createGoalSchema),
     defaultValues: {
-      family_id: family?.id ?? '',
       calculation_mode: 'by_months',
       initial_amount: 0,
       start_date: new Date().toISOString().substring(0, 10),
@@ -64,7 +63,7 @@ export function CreateGoalModal({ open, onClose, onSuccess }: Props) {
 
   const onSubmit = async (data: CreateGoalFormData) => {
     try {
-      await goalsApi.create(user!.id, { ...data, family_id: family!.id })
+      await goalsApi.create(user!.uid, family!.id, data)
       success('Meta criada com sucesso!')
       onSuccess()
     } catch (err: unknown) {

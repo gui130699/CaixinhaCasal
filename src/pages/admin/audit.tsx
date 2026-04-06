@@ -8,10 +8,12 @@ import { Avatar } from '@/components/ui/avatar'
 import { formatDate } from '@/lib/utils'
 
 const ACTION_COLORS: Record<string, string> = {
-  INSERT: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
-  UPDATE: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
-  DELETE: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
-  LOGIN: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400',
+  create: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
+  update: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
+  delete: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
+  login: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400',
+  logout: 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400',
+  password_reset: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400',
 }
 
 export default function AdminAuditPage() {
@@ -27,7 +29,7 @@ export default function AdminAuditPage() {
   const total = data?.total ?? 0
 
   const filtered = search
-    ? logs.filter(l => l.table_name?.toLowerCase().includes(search.toLowerCase()) || l.action?.toLowerCase().includes(search.toLowerCase()) || l.profile?.full_name?.toLowerCase().includes(search.toLowerCase()))
+    ? logs.filter(l => l.entity_name?.toLowerCase().includes(search.toLowerCase()) || l.action_type?.toLowerCase().includes(search.toLowerCase()) || l.actor?.full_name?.toLowerCase().includes(search.toLowerCase()))
     : logs
 
   if (isLoading) return <PageLoading />
@@ -52,14 +54,14 @@ export default function AdminAuditPage() {
             <div className="divide-y divide-gray-50 dark:divide-gray-800">
               {filtered.map(log => (
                 <div key={log.id} className="flex items-start gap-3 px-5 py-3">
-                  <Avatar name={log.profile?.full_name ?? 'S'} size="sm" />
+                  <Avatar name={log.actor?.full_name ?? 'S'} size="sm" />
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-0.5 flex-wrap">
-                      <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{log.profile?.full_name ?? 'Sistema'}</p>
-                      <span className={`text-[10px] px-1.5 py-0.5 rounded font-bold uppercase ${ACTION_COLORS[log.action] ?? 'bg-gray-100 text-gray-600'}`}>{log.action}</span>
-                      <span className="text-xs text-gray-500 font-mono">{log.table_name}</span>
+                      <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{log.actor?.full_name ?? 'Sistema'}</p>
+                      <span className={`text-[10px] px-1.5 py-0.5 rounded font-bold uppercase ${ACTION_COLORS[log.action_type] ?? 'bg-gray-100 text-gray-600'}`}>{log.action_type}</span>
+                      <span className="text-xs text-gray-500 font-mono">{log.entity_name}</span>
                     </div>
-                    {log.description && <p className="text-xs text-gray-400 truncate">{log.description}</p>}
+                    {log.entity_id && <p className="text-xs text-gray-400 truncate">ID: {log.entity_id}</p>}
                   </div>
                   <p className="text-[10px] text-gray-400 whitespace-nowrap">{formatDate(log.created_at, 'dd/MM HH:mm')}</p>
                 </div>

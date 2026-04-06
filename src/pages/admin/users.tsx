@@ -15,7 +15,8 @@ import { formatDate } from '@/lib/utils'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { createUserSchema, CreateUserFormData } from '@/lib/validators'
-import { supabase } from '@/lib/supabase'
+import { auth } from '@/lib/firebase'
+import { createUserWithEmailAndPassword } from 'firebase/auth'
 
 export default function AdminUsersPage() {
   const { toast } = useToast()
@@ -39,18 +40,12 @@ export default function AdminUsersPage() {
   const handleCreate = async (data: CreateUserFormData) => {
     setLoading(true)
     try {
-      const { error } = await supabase.auth.admin.createUser({
-        email: data.email,
-        password: data.password,
-        user_metadata: { full_name: data.full_name },
-        email_confirm: true,
-      })
-      if (error) throw error
+      await createUserWithEmailAndPassword(auth, data.email, data.password)
       queryClient.invalidateQueries({ queryKey: ['admin-users'] })
-      toast({ type: 'success', message: 'Usuário criado!' })
+      toast('Usuário criado!', 'success')
       reset(); setShowCreate(false)
     } catch (err: any) {
-      toast({ type: 'error', message: err.message || 'Erro ao criar usuário' })
+      toast(err.message || 'Erro ao criar usuário', 'error')
     } finally {
       setLoading(false)
     }
@@ -65,7 +60,7 @@ export default function AdminUsersPage() {
           <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Usuários</h1>
           <p className="text-sm text-gray-500">{users.length} usuário(s) cadastrado(s)</p>
         </div>
-        <Button icon={<Plus className="size-4" />} onClick={() => setShowCreate(true)}>Novo Usuário</Button>
+        <Button leftIcon={<Plus className="size-4" />} onClick={() => setShowCreate(true)}>Novo Usuário</Button>
       </div>
 
       <div className="relative">
@@ -85,14 +80,14 @@ export default function AdminUsersPage() {
           <div className="divide-y divide-gray-50 dark:divide-gray-800">
             {filtered.map(u => (
               <div key={u.id} className="flex items-center gap-3 px-5 py-4">
-                <Avatar name={u.full_name} size="md" imageUrl={u.avatar_url} />
+                <Avatar name={u.full_name} size="md" src={u.avatar_url} />
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">{u.full_name}</p>
                   <p className="text-xs text-gray-400 flex items-center gap-1"><Mail className="size-3" />{u.email}</p>
                   {u.phone && <p className="text-xs text-gray-400 flex items-center gap-1"><Phone className="size-3" />{u.phone}</p>}
                 </div>
                 <div className="flex items-center gap-2">
-                  <UserStatusBadge isActive={u.is_active} />
+                  <UserStatusBadge status={u.status} />
                   <span className="text-xs text-gray-400 hidden sm:block">{formatDate(u.created_at)}</span>
                 </div>
               </div>

@@ -20,7 +20,7 @@ export default function CreateAccountModal({ open, onClose }: Props) {
 
   const { register, handleSubmit, reset, setValue, watch, formState: { errors } } = useForm<BankAccountFormData>({
     resolver: zodResolver(bankAccountSchema),
-    defaultValues: { balance: 0, is_primary: false },
+    defaultValues: { initial_balance: 0, is_primary: false },
   })
 
   const handleClose = () => { reset(); onClose() }
@@ -31,10 +31,10 @@ export default function CreateAccountModal({ open, onClose }: Props) {
     try {
       await bankAccountsApi.create({ ...data, family_id: family.id })
       queryClient.invalidateQueries({ queryKey: ['bank-accounts'] })
-      toast({ type: 'success', message: 'Conta criada com sucesso!' })
+      toast('Conta criada com sucesso!', 'success')
       handleClose()
     } catch (err: any) {
-      toast({ type: 'error', message: err.message || 'Erro ao criar conta' })
+      toast(err.message || 'Erro ao criar conta', 'error')
     } finally {
       setLoading(false)
     }
@@ -46,10 +46,10 @@ export default function CreateAccountModal({ open, onClose }: Props) {
         <Input label="Apelido da Conta" placeholder="Ex: Conta Principal, Poupança..." error={errors.nickname?.message} {...register('nickname')} />
         <Input label="Banco" placeholder="Ex: Nubank, Itaú, Bradesco..." error={errors.bank_name?.message} {...register('bank_name')} />
         <div className="grid grid-cols-2 gap-3">
-          <Input label="Agência" placeholder="0001" {...register('branch')} />
+          <Input label="Agência" placeholder="0001" {...register('agency')} />
           <Input label="Número da Conta" placeholder="00000-0" {...register('account_number')} />
         </div>
-        <CurrencyInput label="Saldo Inicial" value={watch('balance') ?? 0} onChange={v => setValue('balance', v)} error={errors.balance?.message} />
+        <CurrencyInput label="Saldo Inicial" value={watch('initial_balance') ?? 0} onChange={v => setValue('initial_balance', v)} error={errors.initial_balance?.message} />
         <label className="flex items-center gap-2 cursor-pointer">
           <input type="checkbox" {...register('is_primary')} className="rounded text-primary-600" />
           <span className="text-sm text-gray-700 dark:text-gray-300">Definir como conta principal</span>

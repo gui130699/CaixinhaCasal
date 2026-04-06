@@ -4,6 +4,7 @@ import { ArrowLeft, Users, Building2, Calendar, TrendingUp, CreditCard } from 'l
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import { goalsApi } from '@/api/goals.api'
 import { installmentsApi } from '@/api/installments.api'
+import { useAuthStore } from '@/stores/auth.store'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { GoalStatusBadge, InstallmentStatusBadge } from '@/components/ui/badge'
@@ -13,17 +14,18 @@ import { formatCurrency, formatDate, formatMonthYear, calculateProgress } from '
 
 export default function GoalDetailPage() {
   const { id } = useParams<{ id: string }>()
+  const { family } = useAuthStore()
 
   const { data: goal, isLoading } = useQuery({
     queryKey: ['goal', id],
-    queryFn: () => goalsApi.getById(id!),
-    enabled: !!id,
+    queryFn: () => goalsApi.getById(id!, family!.id),
+    enabled: !!id && !!family,
   })
 
   const { data: installments = [] } = useQuery({
     queryKey: ['installments-goal', id],
-    queryFn: () => installmentsApi.listByGoal(id!),
-    enabled: !!id,
+    queryFn: () => installmentsApi.listByGoal(id!, family!.id),
+    enabled: !!id && !!family,
   })
 
   if (isLoading) return <PageLoading />

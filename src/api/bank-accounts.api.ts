@@ -36,7 +36,7 @@ export const bankAccountsApi = {
     const ref = await addDoc(collection(db, 'families', family_id, 'bankAccounts'), {
       ...rest,
       family_id,
-      is_active: true,
+      status: 'active',
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     })
@@ -61,7 +61,7 @@ export const bankAccountsApi = {
   },
 
   async toggleStatus(id: string, isActive: boolean, familyId: string): Promise<void> {
-    await updateDoc(doc(db, 'families', familyId, 'bankAccounts', id), { is_active: isActive })
+    await updateDoc(doc(db, 'families', familyId, 'bankAccounts', id), { status: isActive ? 'active' : 'inactive' })
   },
 
   async delete(id: string, familyId: string): Promise<void> {
@@ -70,6 +70,6 @@ export const bankAccountsApi = {
 
   async getTotalBalance(familyId: string): Promise<number> {
     const accounts = await bankAccountsApi.listByFamily(familyId)
-    return accounts.filter(a => a.is_active).reduce((s, a) => s + (a.balance ?? 0), 0)
+    return accounts.filter(a => a.status === 'active').reduce((s, a) => s + (a.current_balance ?? 0), 0)
   },
 }

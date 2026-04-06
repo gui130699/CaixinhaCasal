@@ -51,7 +51,7 @@ export default function DashboardPage() {
 
   const { data: recentTransactions = [] } = useQuery({
     queryKey: ['transactions-recent', familyId],
-    queryFn: () => transactionsApi.listByFamily(familyId, { limit: 8 }),
+    queryFn: async () => (await transactionsApi.listByFamily(familyId, { limit: 8 })).data,
     enabled: !!familyId,
   })
 

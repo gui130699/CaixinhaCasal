@@ -45,9 +45,9 @@ export default function ProfilePage() {
     try {
       const updated = await profilesApi.update(profile.id, data)
       setProfile(updated)
-      toast({ type: 'success', message: 'Perfil atualizado!' })
+      toast('Perfil atualizado!', 'success')
     } catch (err: any) {
-      toast({ type: 'error', message: err.message || 'Erro ao atualizar perfil' })
+      toast(err.message || 'Erro ao atualizar perfil', 'error')
     } finally {
       setLoadingProfile(false)
     }
@@ -57,10 +57,10 @@ export default function ProfilePage() {
     setLoadingPassword(true)
     try {
       await authApi.updatePassword(data.password)
-      toast({ type: 'success', message: 'Senha alterada com sucesso!' })
+      toast('Senha alterada com sucesso!', 'success')
       passwordForm.reset()
     } catch (err: any) {
-      toast({ type: 'error', message: err.message || 'Erro ao alterar senha' })
+      toast(err.message || 'Erro ao alterar senha', 'error')
     } finally {
       setLoadingPassword(false)
     }
@@ -77,7 +77,7 @@ export default function ProfilePage() {
       <Card padding="lg">
         <div className="flex items-center gap-4 mb-6">
           <div className="relative">
-            <Avatar name={profile?.full_name ?? 'U'} size="xl" imageUrl={profile?.avatar_url} />
+            <Avatar name={profile?.full_name ?? 'U'} size="xl" src={profile?.avatar_url} />
             <button className="absolute -bottom-1 -right-1 size-7 bg-primary-600 text-white rounded-full flex items-center justify-center shadow-md hover:bg-primary-700 transition-colors">
               <Camera className="size-3" />
             </button>

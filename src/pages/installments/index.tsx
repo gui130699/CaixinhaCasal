@@ -25,6 +25,7 @@ interface PayModalProps { installment: Installment | null; onClose: () => void }
 
 function PayInstallmentModal({ installment, onClose }: PayModalProps) {
   const { toast } = useToast()
+  const { family } = useAuthStore()
   const queryClient = useQueryClient()
   const [amount, setAmount] = useState(installment?.expected_amount ?? 0)
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10))
@@ -34,12 +35,12 @@ function PayInstallmentModal({ installment, onClose }: PayModalProps) {
     if (!installment) return
     setLoading(true)
     try {
-      await installmentsApi.pay(installment.id, { paid_amount: amount, payment_date: date })
+      await installmentsApi.pay(installment.id, family!.id, { paid_amount: amount, payment_date: date })
       queryClient.invalidateQueries({ queryKey: ['installments'] })
-      toast({ type: 'success', message: 'Parcela registrada como paga!' })
+      toast('Parcela registrada como paga!', 'success')
       onClose()
     } catch (err: any) {
-      toast({ type: 'error', message: err.message || 'Erro ao registrar pagamento' })
+      toast(err.message || 'Erro ao registrar pagamento', 'error')
     } finally {
       setLoading(false)
     }
@@ -58,7 +59,7 @@ function PayInstallmentModal({ installment, onClose }: PayModalProps) {
         <Input label="Data do Pagamento" type="date" value={date} onChange={e => setDate(e.target.value)} />
         <div className="flex justify-end gap-2 pt-2">
           <Button variant="ghost" onClick={onClose}>Cancelar</Button>
-          <Button loading={loading} onClick={handlePay} icon={<CheckCircle2 className="size-4" />}>Confirmar</Button>
+          <Button loading={loading} onClick={handlePay} leftIcon={<CheckCircle2 className="size-4" />}>Confirmar</Button>
         </div>
       </div>
     </Modal>

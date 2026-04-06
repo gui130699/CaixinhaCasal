@@ -1,15 +1,13 @@
-import { Navigate, useLocation } from 'react-router-dom'
-import type { ReactNode } from 'react'
+import { Navigate, Outlet, useLocation } from 'react-router-dom'
 import { useAuthStore } from '@/stores/auth.store'
 import { PageLoading } from '@/components/ui/empty-state'
 
 interface ProtectedRouteProps {
-  children: ReactNode
   requireAdmin?: boolean
   requireFamilyAdmin?: boolean
 }
 
-export function ProtectedRoute({ children, requireAdmin, requireFamilyAdmin }: ProtectedRouteProps) {
+export function ProtectedRoute({ requireAdmin, requireFamilyAdmin }: ProtectedRouteProps) {
   const { user, isInitialized, isLoading, isMasterAdmin, familyRole } = useAuthStore()
   const location = useLocation()
 
@@ -29,5 +27,5 @@ export function ProtectedRoute({ children, requireAdmin, requireFamilyAdmin }: P
     return <Navigate to="/" replace />
   }
 
-  return <>{children}</>
+  return <Outlet />
 }

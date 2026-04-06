@@ -13,7 +13,7 @@ export default function AdminPage() {
 
   if (lf || lu) return <PageLoading />
 
-  const activeUsers = users.filter(u => u.is_active)
+  const activeUsers = users.filter(u => u.status === 'active')
   const recentFamilies = [...families].sort((a, b) => b.created_at.localeCompare(a.created_at)).slice(0, 5)
 
   return (
@@ -61,8 +61,8 @@ export default function AdminPage() {
                   <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{u.full_name}</p>
                   <p className="text-xs text-gray-400">{u.email}</p>
                 </div>
-                <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${u.is_active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-600'}`}>
-                  {u.is_active ? 'Ativo' : 'Inativo'}
+                <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${u.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-600'}`}>
+                  {u.status === 'active' ? 'Ativo' : 'Inativo'}
                 </span>
               </div>
             ))}

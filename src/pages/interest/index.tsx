@@ -9,7 +9,7 @@ import { useAuthStore } from '@/stores/auth.store'
 import { interestRateSchema, InterestRateFormData } from '@/lib/validators'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Input, Select, CurrencyInput } from '@/components/ui/input'
+import { Input, Select, Textarea } from '@/components/ui/input'
 import { Modal } from '@/components/ui/modal'
 import { PageLoading, EmptyState } from '@/components/ui/empty-state'
 import { useToast } from '@/components/ui/toast'
@@ -29,7 +29,7 @@ function AddInterestModal({ open, onClose }: { open: boolean; onClose: () => voi
 
   const { register, handleSubmit, reset, setValue, watch, formState: { errors } } = useForm<InterestRateFormData>({
     resolver: zodResolver(interestRateSchema),
-    defaultValues: { rate: 0, amount: 0, period: new Date().toISOString().slice(0, 7) },
+    defaultValues: { rate_percent: 0, reference_month: new Date().toISOString().slice(0, 7) },
   })
 
   const handleClose = () => { reset(); onClose() }
@@ -41,10 +41,10 @@ function AddInterestModal({ open, onClose }: { open: boolean; onClose: () => voi
       await interestRatesApi.create({ ...data, family_id: family.id })
       queryClient.invalidateQueries({ queryKey: ['interest-rates'] })
       queryClient.invalidateQueries({ queryKey: ['bank-accounts'] })
-      toast({ type: 'success', message: 'Rendimento registrado!' })
+      toast('Rendimento registrado!', 'success')
       handleClose()
     } catch (err: any) {
-      toast({ type: 'error', message: err.message || 'Erro ao registrar rendimento' })
+      toast(err.message || 'Erro ao registrar rendimento', 'error')
     } finally {
       setLoading(false)
     }
@@ -58,10 +58,10 @@ function AddInterestModal({ open, onClose }: { open: boolean; onClose: () => voi
           {accounts.map(a => <option key={a.id} value={a.id}>{a.nickname}</option>)}
         </Select>
         <div className="grid grid-cols-2 gap-3">
-          <Input label="Taxa (%)" type="number" step="0.01" placeholder="0.00" error={errors.rate?.message} {...register('rate', { valueAsNumber: true })} />
-          <Input label="Período" type="month" error={errors.period?.message} {...register('period')} />
+          <Input label="Taxa (%)" type="number" step="0.01" placeholder="0.00" error={errors.rate_percent?.message} {...register('rate_percent', { valueAsNumber: true })} />
+          <Input label="Período" type="month" error={errors.reference_month?.message} {...register('reference_month')} />
         </div>
-        <CurrencyInput label="Valor do Rendimento" value={watch('amount') ?? 0} onChange={v => setValue('amount', v)} error={errors.amount?.message} />
+        <Textarea label="Observações" rows={2} {...register('notes')} />
         <div className="flex justify-end gap-2 pt-2">
           <Button type="button" variant="ghost" onClick={handleClose}>Cancelar</Button>
           <Button type="submit" loading={loading}>Registrar</Button>
@@ -81,8 +81,8 @@ export default function InterestPage() {
     enabled: !!family,
   })
 
-  const totalInterest = rates.reduce((s, r) => s + r.amount, 0)
-  const avgRate = rates.length ? rates.reduce((s, r) => s + r.rate, 0) / rates.length : 0
+  const totalInterest = rates.reduce((s, r) => s + (r.interest_amount ?? 0), 0)
+  const avgRate = rates.length ? rates.reduce((s, r) => s + (r.rate_percent ?? 0), 0) / rates.length : 0
 
   if (isLoading) return <PageLoading />
 
@@ -93,7 +93,7 @@ export default function InterestPage() {
           <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Rendimentos</h1>
           <p className="text-sm text-gray-500 dark:text-gray-400">Registre os rendimentos mensais das contas</p>
         </div>
-        <Button icon={<Plus className="size-4" />} onClick={() => setShowAdd(true)}>Registrar Rendimento</Button>
+        <Button leftIcon={<Plus className="size-4" />} onClick={() => setShowAdd(true)}>Registrar Rendimento</Button>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -116,7 +116,7 @@ export default function InterestPage() {
           <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Histórico de Rendimentos</h3>
         </div>
         {rates.length === 0 ? (
-          <EmptyState icon={<TrendingUp className="size-8" />} title="Nenhum rendimento registrado" description="Registre os rendimentos mensais de cada conta" actionLabel="Registrar" onAction={() => setShowAdd(true)} />
+          <EmptyState icon={<TrendingUp className="size-8" />} title="Nenhum rendimento registrado" description="Registre os rendimentos mensais de cada conta" action={<Button size="sm" leftIcon={<Plus className="size-4" />} onClick={() => setShowAdd(true)}>Registrar</Button>} />
         ) : (
           <div className="table-container rounded-none border-0">
             <table className="table-base">
@@ -133,9 +133,9 @@ export default function InterestPage() {
                 {rates.map(r => (
                   <tr key={r.id} className="table-row-hover">
                     <td className="table-td font-medium">{r.bank_account?.nickname ?? '—'}</td>
-                    <td className="table-td">{r.period}</td>
-                    <td className="table-td"><span className="text-green-600 font-medium">{r.rate}%</span></td>
-                    <td className="table-td font-bold text-green-600">+{formatCurrency(r.amount)}</td>
+                    <td className="table-td">{r.reference_month}</td>
+                    <td className="table-td"><span className="text-green-600 font-medium">{r.rate_percent}%</span></td>
+                    <td className="table-td font-bold text-green-600">+{formatCurrency(r.interest_amount ?? 0)}</td>
                     <td className="table-td text-gray-400">{formatDate(r.created_at)}</td>
                   </tr>
                 ))}

@@ -6,7 +6,6 @@ import { bankAccountsApi } from '@/api/bank-accounts.api'
 import { useAuthStore } from '@/stores/auth.store'
 import { Card, StatCard } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
 import { PageLoading, EmptyState } from '@/components/ui/empty-state'
 import { ConfirmModal } from '@/components/ui/modal'
 import { useToast } from '@/components/ui/toast'
@@ -27,17 +26,17 @@ export default function BankingPage() {
     enabled: !!family,
   })
 
-  const totalBalance = accounts.reduce((s, a) => s + (a.is_active ? a.balance : 0), 0)
+  const totalBalance = accounts.reduce((s, a) => s + (a.status === 'active' ? a.current_balance : 0), 0)
   const primaryAccount = accounts.find(a => a.is_primary)
 
   const handleDelete = async () => {
     if (!deletingId) return
     try {
-      await bankAccountsApi.delete(deletingId)
+      await bankAccountsApi.delete(deletingId, family!.id)
       queryClient.invalidateQueries({ queryKey: ['bank-accounts'] })
-      toast({ type: 'success', message: 'Conta removida' })
+      toast('Conta removida', 'success')
     } catch {
-      toast({ type: 'error', message: 'Erro ao remover conta' })
+      toast('Erro ao remover conta', 'error')
     } finally {
       setDeletingId(null)
     }
@@ -48,9 +47,9 @@ export default function BankingPage() {
     try {
       await bankAccountsApi.setPrimary(id, family!.id)
       queryClient.invalidateQueries({ queryKey: ['bank-accounts'] })
-      toast({ type: 'success', message: 'Conta principal atualizada' })
+      toast('Conta principal atualizada', 'success')
     } catch {
-      toast({ type: 'error', message: 'Erro ao atualizar conta' })
+      toast('Erro ao atualizar conta', 'error')
     } finally {
       setSettingPrimary(null)
     }
@@ -58,10 +57,10 @@ export default function BankingPage() {
 
   const handleToggle = async (id: string, active: boolean) => {
     try {
-      await bankAccountsApi.toggleStatus(id, active)
+      await bankAccountsApi.toggleStatus(id, active, family!.id)
       queryClient.invalidateQueries({ queryKey: ['bank-accounts'] })
     } catch {
-      toast({ type: 'error', message: 'Erro ao atualizar status' })
+      toast('Erro ao atualizar status', 'error')
     }
   }
 
@@ -74,21 +73,21 @@ export default function BankingPage() {
           <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Contas Bancárias</h1>
           <p className="text-sm text-gray-500 dark:text-gray-400">Gerencie as contas da família</p>
         </div>
-        <Button icon={<Plus className="size-4" />} onClick={() => setShowCreate(true)}>Nova Conta</Button>
+        <Button leftIcon={<Plus className="size-4" />} onClick={() => setShowCreate(true)}>Nova Conta</Button>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <StatCard title="Saldo Total" value={formatCurrency(totalBalance)} icon={<TrendingUp className="size-5" />} color="primary" />
-        <StatCard title="Contas Ativas" value={String(accounts.filter(a => a.is_active).length)} icon={<Building2 className="size-5" />} color="success" />
+        <StatCard title="Contas Ativas" value={String(accounts.filter(a => a.status === 'active').length)} icon={<Building2 className="size-5" />} color="success" />
         <StatCard title="Conta Principal" value={primaryAccount?.nickname ?? '—'} icon={<Star className="size-5" />} color="warning" />
       </div>
 
       {accounts.length === 0 ? (
-        <EmptyState icon={<Building2 className="size-8" />} title="Nenhuma conta cadastrada" description="Adicione uma conta bancária para começar" actionLabel="Nova Conta" onAction={() => setShowCreate(true)} />
+        <EmptyState icon={<Building2 className="size-8" />} title="Nenhuma conta cadastrada" description="Adicione uma conta bancária para começar" action={<Button leftIcon={<Plus className="size-4" />} onClick={() => setShowCreate(true)}>Nova Conta</Button>} />
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {accounts.map(account => (
-            <div key={account.id} className={`card ${!account.is_active ? 'opacity-60' : ''} relative group`}>
+            <div key={account.id} className={`card ${account.status !== 'active' ? 'opacity-60' : ''} relative group`}>
               <div className="flex items-start justify-between mb-3">
                 <div className="flex items-center gap-2">
                   <div className="size-9 rounded-xl bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
@@ -100,13 +99,13 @@ export default function BankingPage() {
                   </div>
                 </div>
                 <div className="flex items-center gap-1">
-                  {account.is_primary && <Badge variant="warning" size="sm">Principal</Badge>}
-                  {!account.is_active && <Badge variant="default" size="sm">Inativa</Badge>}
+                  {account.is_primary && <span className="badge bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400">Principal</span>}
+                  {account.status !== 'active' && <span className="badge bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400">Inativa</span>}
                 </div>
               </div>
 
               <div className="mb-4">
-                <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{formatCurrency(account.balance)}</p>
+                <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{formatCurrency(account.current_balance)}</p>
                 {account.account_number && (
                   <p className="text-xs text-gray-400 mt-0.5">Conta: {account.account_number}</p>
                 )}
@@ -129,8 +128,8 @@ export default function BankingPage() {
                           Definir como principal
                         </button>
                       )}
-                      <button onClick={() => handleToggle(account.id, !account.is_active)} className="w-full text-left px-4 py-2 text-xs hover:bg-gray-50 dark:hover:bg-gray-800">
-                        {account.is_active ? 'Desativar' : 'Ativar'}
+                      <button onClick={() => handleToggle(account.id, account.status !== 'active')} className="w-full text-left px-4 py-2 text-xs hover:bg-gray-50 dark:hover:bg-gray-800">
+                        {account.status === 'active' ? 'Desativar' : 'Ativar'}
                       </button>
                       <button onClick={() => setDeletingId(account.id)} className="w-full text-left px-4 py-2 text-xs text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20">
                         Remover
@@ -150,9 +149,9 @@ export default function BankingPage() {
         onClose={() => setDeletingId(null)}
         onConfirm={handleDelete}
         title="Remover conta"
-        description="Esta ação não pode ser desfeita. Todos os dados da conta serão perdidos."
+        message="Esta ação não pode ser desfeita. Todos os dados da conta serão perdidos."
         confirmLabel="Remover"
-        variant="danger"
+        danger
       />
     </div>
   )

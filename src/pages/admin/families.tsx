@@ -33,10 +33,10 @@ export default function AdminFamiliesPage() {
     try {
       await familiesApi.create(data)
       queryClient.invalidateQueries({ queryKey: ['admin-families'] })
-      toast({ type: 'success', message: 'Família criada!' })
+      toast('Família criada!', 'success')
       reset(); setShowCreate(false)
     } catch (err: any) {
-      toast({ type: 'error', message: err.message || 'Erro ao criar família' })
+      toast(err.message || 'Erro ao criar família', 'error')
     } finally {
       setLoading(false)
     }
@@ -47,9 +47,9 @@ export default function AdminFamiliesPage() {
     try {
       await familiesApi.delete(deletingId)
       queryClient.invalidateQueries({ queryKey: ['admin-families'] })
-      toast({ type: 'success', message: 'Família removida' })
+      toast('Família removida', 'success')
     } catch {
-      toast({ type: 'error', message: 'Erro ao remover família' })
+      toast('Erro ao remover família', 'error')
     } finally {
       setDeletingId(null)
     }
@@ -70,11 +70,11 @@ export default function AdminFamiliesPage() {
           <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Famílias</h1>
           <p className="text-sm text-gray-500">{families.length} família(s) cadastrada(s)</p>
         </div>
-        <Button icon={<Plus className="size-4" />} onClick={() => setShowCreate(true)}>Nova Família</Button>
+        <Button leftIcon={<Plus className="size-4" />} onClick={() => setShowCreate(true)}>Nova Família</Button>
       </div>
 
       {families.length === 0 ? (
-        <EmptyState icon={<Home className="size-8" />} title="Nenhuma família" description="Crie a primeira família do sistema" actionLabel="Nova Família" onAction={() => setShowCreate(true)} />
+        <EmptyState icon={<Home className="size-8" />} title="Nenhuma família" description="Crie a primeira família do sistema" action={<Button leftIcon={<Plus className="size-4" />} onClick={() => setShowCreate(true)}>Nova Família</Button>} />
       ) : (
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {families.map(f => (
@@ -87,12 +87,14 @@ export default function AdminFamiliesPage() {
               </div>
               <p className="text-sm font-bold text-gray-900 dark:text-gray-100 mb-1">{f.name}</p>
               <p className="text-xs text-gray-400 mb-3">Criada em {formatDate(f.created_at)}</p>
-              <div className="flex items-center gap-2 p-2 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                <p className="text-xs font-mono text-gray-600 dark:text-gray-300 flex-1">{f.invite_code}</p>
-                <button onClick={() => copyCode(f.invite_code)} className="text-gray-400 hover:text-primary-600">
-                  {copiedCode === f.invite_code ? <Check className="size-3 text-green-500" /> : <Copy className="size-3" />}
-                </button>
-              </div>
+              {f.invite_code && (
+                <div className="flex items-center gap-2 p-2 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                  <p className="text-xs font-mono text-gray-600 dark:text-gray-300 flex-1">{f.invite_code}</p>
+                  <button onClick={() => copyCode(f.invite_code!)} className="text-gray-400 hover:text-primary-600">
+                    {copiedCode === f.invite_code ? <Check className="size-3 text-green-500" /> : <Copy className="size-3" />}
+                  </button>
+                </div>
+              )}
             </Card>
           ))}
         </div>
@@ -108,7 +110,7 @@ export default function AdminFamiliesPage() {
         </form>
       </Modal>
 
-      <ConfirmModal open={!!deletingId} onClose={() => setDeletingId(null)} onConfirm={handleDelete} title="Remover família" description="Todos os dados da família serão apagados permanentemente." confirmLabel="Remover" variant="danger" />
+      <ConfirmModal open={!!deletingId} onClose={() => setDeletingId(null)} onConfirm={handleDelete} title="Remover família" message="Todos os dados da família serão apagados permanentemente." confirmLabel="Remover" danger />
     </div>
   )
 }

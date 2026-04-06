@@ -18,9 +18,9 @@ import { formatCurrency, formatDate, transactionTypeLabel } from '@/lib/utils'
 
 const TYPE_TABS = [
   { label: 'Todos', value: '' },
-  { label: 'Entradas', value: 'income' },
-  { label: 'Saídas', value: 'expense' },
-  { label: 'Meta', value: 'goal_payment' },
+  { label: 'Entradas', value: 'deposit' },
+  { label: 'Saídas', value: 'withdrawal' },
+  { label: 'Parcelas', value: 'advance_installment' },
 ]
 
 function CreateTransactionModal({ open, onClose }: { open: boolean; onClose: () => void }) {
@@ -37,7 +37,7 @@ function CreateTransactionModal({ open, onClose }: { open: boolean; onClose: () 
 
   const { register, handleSubmit, reset, setValue, watch, formState: { errors } } = useForm<CreateTransactionFormData>({
     resolver: zodResolver(createTransactionSchema),
-    defaultValues: { amount: 0, type: 'expense', date: new Date().toISOString().slice(0, 10) },
+    defaultValues: { amount: 0, type: 'withdrawal', transaction_date: new Date().toISOString().slice(0, 10) },
   })
 
   const handleClose = () => { reset(); onClose() }
@@ -49,10 +49,10 @@ function CreateTransactionModal({ open, onClose }: { open: boolean; onClose: () 
       await transactionsApi.create({ ...data, family_id: family.id })
       queryClient.invalidateQueries({ queryKey: ['transactions'] })
       queryClient.invalidateQueries({ queryKey: ['bank-accounts'] })
-      toast({ type: 'success', message: 'Transação registrada!' })
+      toast('Transação registrada!', 'success')
       handleClose()
     } catch (err: any) {
-      toast({ type: 'error', message: err.message || 'Erro ao registrar transação' })
+      toast(err.message || 'Erro ao registrar transação', 'error')
     } finally {
       setLoading(false)
     }
@@ -62,9 +62,10 @@ function CreateTransactionModal({ open, onClose }: { open: boolean; onClose: () 
     <Modal open={open} onClose={handleClose} title="Nova Transação" size="md">
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
         <Select label="Tipo" error={errors.type?.message} {...register('type')}>
-          <option value="income">Entrada</option>
-          <option value="expense">Saída</option>
-          <option value="transfer">Transferência</option>
+          <option value="deposit">Entrada</option>
+          <option value="withdrawal">Saída</option>
+          <option value="extra_deposit">Depósito Extra</option>
+          <option value="advance_installment">Pagamento de Parcela</option>
         </Select>
         <Select label="Conta" error={errors.bank_account_id?.message} {...register('bank_account_id')}>
           <option value="">Selecione...</option>
@@ -73,7 +74,7 @@ function CreateTransactionModal({ open, onClose }: { open: boolean; onClose: () 
         <Input label="Descrição" placeholder="Ex: Mercado, Salário..." error={errors.description?.message} {...register('description')} />
         <div className="grid grid-cols-2 gap-3">
           <CurrencyInput label="Valor" value={watch('amount') ?? 0} onChange={v => setValue('amount', v)} error={errors.amount?.message} />
-          <Input label="Data" type="date" error={errors.date?.message} {...register('date')} />
+          <Input label="Data" type="date" error={errors.transaction_date?.message} {...register('transaction_date')} />
         </div>
         <Textarea label="Observações" rows={2} {...register('notes')} />
         <div className="flex justify-end gap-2 pt-2">
@@ -97,8 +98,9 @@ export default function TransactionsPage() {
   })
 
   const transactions = data?.data ?? []
-  const income = transactions.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0)
-  const expense = transactions.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0)
+  const incomingTypes = ['deposit', 'extra_deposit', 'interest', 'transfer_in']
+  const income = transactions.filter(t => incomingTypes.includes(t.type)).reduce((s, t) => s + t.amount, 0)
+  const expense = transactions.filter(t => !incomingTypes.includes(t.type)).reduce((s, t) => s + t.amount, 0)
 
   if (isLoading) return <PageLoading />
 
@@ -109,7 +111,7 @@ export default function TransactionsPage() {
           <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Transações</h1>
           <p className="text-sm text-gray-500 dark:text-gray-400">Histórico de movimentações financeiras</p>
         </div>
-        <Button icon={<Plus className="size-4" />} onClick={() => setShowCreate(true)}>Nova Transação</Button>
+        <Button leftIcon={<Plus className="size-4" />} onClick={() => setShowCreate(true)}>Nova Transação</Button>
       </div>
 
       <div className="grid grid-cols-3 gap-3">
@@ -129,23 +131,23 @@ export default function TransactionsPage() {
         </div>
 
         {transactions.length === 0 ? (
-          <EmptyState icon={<ArrowRightLeft className="size-8" />} title="Nenhuma transação" description="Registre a primeira movimentação" actionLabel="Nova Transação" onAction={() => setShowCreate(true)} />
+          <EmptyState icon={<ArrowRightLeft className="size-8" />} title="Nenhuma transação" description="Registre a primeira movimentação" action={<Button size="sm" leftIcon={<Plus className="size-4" />} onClick={() => setShowCreate(true)}>Nova Transação</Button>} />
         ) : (
           <div className="divide-y divide-gray-50 dark:divide-gray-800">
             {transactions.map(tx => (
               <div key={tx.id} className="flex items-center gap-3 px-5 py-4">
-                <div className={`size-9 rounded-full flex items-center justify-center shrink-0 ${tx.type === 'income' ? 'bg-green-100 dark:bg-green-900/30' : 'bg-red-100 dark:bg-red-900/30'}`}>
-                  {tx.type === 'income'
+                <div className={`size-9 rounded-full flex items-center justify-center shrink-0 ${incomingTypes.includes(tx.type) ? 'bg-green-100 dark:bg-green-900/30' : 'bg-red-100 dark:bg-red-900/30'}`}>
+                  {incomingTypes.includes(tx.type)
                     ? <ArrowUpCircle className="size-4 text-green-600" />
                     : <ArrowDownCircle className="size-4 text-red-500" />}
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">{tx.description}</p>
-                  <p className="text-xs text-gray-400">{formatDate(tx.date)} • {transactionTypeLabel(tx.type)} • {tx.bank_account?.nickname}</p>
+                  <p className="text-xs text-gray-400">{formatDate(tx.transaction_date)} • {transactionTypeLabel[tx.type]} • {tx.bank_account?.nickname}</p>
                 </div>
                 <div className="text-right">
-                  <p className={`text-sm font-bold ${tx.type === 'income' ? 'text-green-600' : 'text-red-500'}`}>
-                    {tx.type === 'income' ? '+' : '-'}{formatCurrency(tx.amount)}
+                  <p className={`text-sm font-bold ${incomingTypes.includes(tx.type) ? 'text-green-600' : 'text-red-500'}`}>
+                    {incomingTypes.includes(tx.type) ? '+' : '-'}{formatCurrency(tx.amount)}
                   </p>
                   {tx.profile && <Avatar name={tx.profile.full_name} size="xs" className="ml-auto mt-0.5" />}
                 </div>
