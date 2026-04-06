@@ -1,41 +1,39 @@
-import { supabase } from '@/lib/supabase'
+import {
+  signInWithEmailAndPassword,
+  signOut,
+  sendPasswordResetEmail,
+  updatePassword,
+  onAuthStateChanged,
+  type User,
+} from 'firebase/auth'
+import { auth } from '@/lib/firebase'
 
 export const authApi = {
   async signIn(email: string, password: string) {
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password })
-    if (error) throw error
-    return data
+    const credential = await signInWithEmailAndPassword(auth, email, password)
+    return credential.user
   },
 
   async signOut() {
-    const { error } = await supabase.auth.signOut()
-    if (error) throw error
+    await signOut(auth)
   },
 
-  async getSession() {
-    const { data, error } = await supabase.auth.getSession()
-    if (error) throw error
-    return data.session
-  },
-
-  async getUser() {
-    const { data, error } = await supabase.auth.getUser()
-    if (error) throw error
-    return data.user
+  getCurrentUser(): User | null {
+    return auth.currentUser
   },
 
   async sendPasswordReset(email: string) {
-    const redirectTo = `${window.location.origin}/reset-password`
-    const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo })
-    if (error) throw error
+    const actionCodeSettings = { url: `${window.location.origin}/login` }
+    await sendPasswordResetEmail(auth, email, actionCodeSettings)
   },
 
   async updatePassword(newPassword: string) {
-    const { error } = await supabase.auth.updateUser({ password: newPassword })
-    if (error) throw error
+    const user = auth.currentUser
+    if (!user) throw new Error('Usuário não autenticado')
+    await updatePassword(user, newPassword)
   },
 
-  onAuthStateChange(callback: Parameters<typeof supabase.auth.onAuthStateChange>[0]) {
-    return supabase.auth.onAuthStateChange(callback)
+  onAuthStateChange(callback: (user: User | null) => void) {
+    return onAuthStateChanged(auth, callback)
   },
 }

@@ -1,49 +1,45 @@
-import { supabase } from '@/lib/supabase'
+import {
+  collection,
+  addDoc,
+  getDocs,
+  query,
+  orderBy,
+  limit as limitQuery,
+  startAfter,
+} from 'firebase/firestore'
+import { db } from '@/lib/firebase'
 import type { AuditLog } from '@/types'
 
 export const auditApi = {
-  async list(filters?: {
-    actor_id?: string
-    entity?: string
-    action?: string
-    start_date?: string
-    end_date?: string
-    limit?: number
-    offset?: number
-  }): Promise<{ data: AuditLog[]; count: number }> {
-    let query = supabase
-      .from('audit_logs')
-      .select('*, actor:profiles!audit_logs_actor_user_id_fkey(id,full_name)', { count: 'exact' })
-      .order('created_at', { ascending: false })
-
-    if (filters?.actor_id) query = query.eq('actor_user_id', filters.actor_id)
-    if (filters?.entity) query = query.eq('entity_name', filters.entity)
-    if (filters?.action) query = query.eq('action_type', filters.action)
-    if (filters?.start_date) query = query.gte('created_at', filters.start_date)
-    if (filters?.end_date) query = query.lte('created_at', filters.end_date)
-    if (filters?.limit) query = query.limit(filters.limit)
-    if (filters?.offset) query = query.range(filters.offset, (filters.offset) + (filters.limit ?? 50) - 1)
-
-    const { data, error, count } = await query
-    if (error) throw error
-    return { data: data ?? [], count: count ?? 0 }
+  async list(filters?: { page?: number; limit?: number }): Promise<{ data: AuditLog[]; total: number }> {
+    const lim = filters?.limit ?? 50
+    const snap = await getDocs(
+      query(collection(db, 'auditLogs'), orderBy('created_at', 'desc'), limitQuery(500))
+    )
+    const all = snap.docs.map(d => ({ id: d.id, ...d.data() })) as AuditLog[]
+    const page = filters?.page ?? 1
+    const data = all.slice((page - 1) * lim, page * lim)
+    return { data, total: all.length }
   },
 
   async log(params: {
     actorId: string
     entity: string
     entityId?: string
-    action: AuditLog['action_type']
+    action: string
+    description?: string
     before?: Record<string, unknown>
     after?: Record<string, unknown>
   }): Promise<void> {
-    await supabase.from('audit_logs').insert({
-      actor_user_id: params.actorId,
-      entity_name: params.entity,
+    await addDoc(collection(db, 'auditLogs'), {
+      user_id: params.actorId,
+      table_name: params.entity,
       entity_id: params.entityId ?? null,
-      action_type: params.action,
+      action: params.action,
+      description: params.description ?? null,
       before_data: params.before ?? null,
       after_data: params.after ?? null,
+      created_at: new Date().toISOString(),
     })
   },
 }

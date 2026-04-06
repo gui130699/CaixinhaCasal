@@ -4,12 +4,13 @@ import { authApi } from '@/api/auth.api'
 import { profilesApi } from '@/api/profiles.api'
 import { familiesApi } from '@/api/families.api'
 import { useAuthStore } from '@/stores/auth.store'
+import type { User } from 'firebase/auth'
 
 const AuthContext = createContext<null>(null)
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const {
-    setUser, setSession, setProfile, setFamily,
+    setUser, setProfile, setFamily,
     setFamilyRole, setMasterAdmin, setLoading, setInitialized, reset,
   } = useAuthStore()
 
@@ -17,35 +18,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const location = useLocation()
 
   useEffect(() => {
-    // Inicializar sessão
-    authApi.getSession().then(async session => {
-      if (session?.user) {
-        setUser(session.user)
-        setSession(session)
-        await loadUserData(session.user.id)
-      } else {
-        reset()
-      }
-    }).catch(() => reset())
-
-    // Escutar mudanças de auth
-    const { data: { subscription } } = authApi.onAuthStateChange(async (event, session) => {
-      if (event === 'SIGNED_IN' && session?.user) {
-        setUser(session.user)
-        setSession(session)
-        await loadUserData(session.user.id)
-        // Redirecionar se estava em public route
+    const unsubscribe = authApi.onAuthStateChange(async (user: User | null) => {
+      setUser(user)
+      if (user) {
+        await loadUserData(user.uid)
         const isPublic = ['/login', '/forgot-password', '/reset-password'].includes(location.pathname)
         if (isPublic) navigate('/')
-      } else if (event === 'SIGNED_OUT') {
+      } else {
         reset()
-        navigate('/login')
-      } else if (event === 'TOKEN_REFRESHED' && session) {
-        setSession(session)
+        const isPublic = ['/login', '/forgot-password', '/reset-password'].includes(location.pathname)
+        if (!isPublic) navigate('/login')
       }
     })
-
-    return () => subscription.unsubscribe()
+    return () => unsubscribe()
   }, []) // eslint-disable-line
 
   async function loadUserData(userId: string) {
@@ -62,7 +47,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setFamily(familyData.family)
         setFamilyRole(familyData.role as 'admin' | 'member')
       }
-      await profilesApi.updateLastLogin(userId)
+      if (profile) await profilesApi.updateLastLogin(userId)
     } catch (err) {
       console.error('Erro ao carregar dados do usuário:', err)
     } finally {

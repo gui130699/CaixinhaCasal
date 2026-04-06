@@ -1,50 +1,54 @@
-import { supabase } from '@/lib/supabase'
+import {
+  doc,
+  getDoc,
+  setDoc,
+  updateDoc,
+  collection,
+  getDocs,
+  orderBy,
+  query,
+} from 'firebase/firestore'
+import { db } from '@/lib/firebase'
 import type { Profile } from '@/types'
-import type { UpdateProfileFormData } from '@/lib/validators'
 
 export const profilesApi = {
-  async getById(id: string): Promise<Profile> {
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', id)
-      .single()
-    if (error) throw error
-    return data
+  async getById(id: string): Promise<Profile | null> {
+    const snap = await getDoc(doc(db, 'profiles', id))
+    if (!snap.exists()) return null
+    return { id: snap.id, ...snap.data() } as Profile
   },
 
-  async update(id: string, form: UpdateProfileFormData): Promise<Profile> {
-    const { data, error } = await supabase
-      .from('profiles')
-      .update({ full_name: form.full_name, phone: form.phone ?? null })
-      .eq('id', id)
-      .select()
-      .single()
-    if (error) throw error
-    return data
+  async create(id: string, data: Partial<Profile>): Promise<void> {
+    await setDoc(doc(db, 'profiles', id), {
+      ...data,
+      is_active: true,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    })
+  },
+
+  async update(id: string, data: Partial<Profile>): Promise<Profile> {
+    await updateDoc(doc(db, 'profiles', id), {
+      ...data,
+      updated_at: new Date().toISOString(),
+    })
+    const snap = await getDoc(doc(db, 'profiles', id))
+    return { id: snap.id, ...snap.data() } as Profile
   },
 
   async updateLastLogin(id: string) {
-    await supabase
-      .from('profiles')
-      .update({ last_login_at: new Date().toISOString() })
-      .eq('id', id)
+    await updateDoc(doc(db, 'profiles', id), {
+      last_login_at: new Date().toISOString(),
+    })
   },
 
   async isMasterAdmin(userId: string): Promise<boolean> {
-    const { count } = await supabase
-      .from('admin_roles')
-      .select('*', { count: 'exact', head: true })
-      .eq('user_id', userId)
-    return (count ?? 0) > 0
+    const snap = await getDoc(doc(db, 'adminRoles', userId))
+    return snap.exists() && snap.data().role === 'master_admin'
   },
 
-  async listAllWithEmail() {
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('*, family_members(family_id, role, status, families(name))')
-      .order('full_name')
-    if (error) throw error
-    return data
+  async listAllWithEmail(): Promise<Profile[]> {
+    const snap = await getDocs(query(collection(db, 'profiles'), orderBy('full_name')))
+    return snap.docs.map(d => ({ id: d.id, ...d.data() })) as Profile[]
   },
 }

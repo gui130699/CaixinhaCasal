@@ -34,10 +34,10 @@ export default defineConfig({
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
         runtimeCaching: [
           {
-            urlPattern: /^https:\/\/.*\.supabase\.co\/.*/i,
+            urlPattern: /^https:\/\/firestore\.googleapis\.com\/.*/i,
             handler: 'NetworkFirst',
             options: {
-              cacheName: 'supabase-api-cache',
+              cacheName: 'firebase-cache',
               expiration: { maxEntries: 50, maxAgeSeconds: 300 },
               networkTimeoutSeconds: 10,
             },

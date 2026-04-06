@@ -1,82 +1,75 @@
-import { supabase } from '@/lib/supabase'
+import {
+  collection,
+  doc,
+  getDoc,
+  getDocs,
+  addDoc,
+  updateDoc,
+  deleteDoc,
+  query,
+  where,
+  orderBy,
+  writeBatch,
+} from 'firebase/firestore'
+import { db } from '@/lib/firebase'
 import type { BankAccount } from '@/types'
-import type { BankAccountFormData } from '@/lib/validators'
 
 export const bankAccountsApi = {
   async listByFamily(familyId: string): Promise<BankAccount[]> {
-    const { data, error } = await supabase
-      .from('bank_accounts')
-      .select('*')
-      .eq('family_id', familyId)
-      .order('is_primary', { ascending: false })
-      .order('nickname')
-    if (error) throw error
-    return data
+    const snap = await getDocs(
+      query(collection(db, 'families', familyId, 'bankAccounts'), orderBy('nickname'))
+    )
+    return snap.docs
+      .map(d => ({ id: d.id, ...d.data() }) as BankAccount)
+      .sort((a, b) => Number(b.is_primary) - Number(a.is_primary))
   },
 
-  async getById(id: string): Promise<BankAccount> {
-    const { data, error } = await supabase
-      .from('bank_accounts')
-      .select('*')
-      .eq('id', id)
-      .single()
-    if (error) throw error
-    return data
+  async getById(id: string, familyId: string): Promise<BankAccount | null> {
+    const snap = await getDoc(doc(db, 'families', familyId, 'bankAccounts', id))
+    if (!snap.exists()) return null
+    return { id: snap.id, ...snap.data() } as BankAccount
   },
 
-  async create(familyId: string, form: BankAccountFormData): Promise<BankAccount> {
-    const { data, error } = await supabase
-      .from('bank_accounts')
-      .insert({ ...form, family_id: familyId })
-      .select()
-      .single()
-    if (error) throw error
-    return data
+  // Overloaded for compatibility: accepts (data) where data.family_id is set
+  async create(data: Partial<BankAccount> & { family_id: string }): Promise<BankAccount> {
+    const { family_id, ...rest } = data
+    const ref = await addDoc(collection(db, 'families', family_id, 'bankAccounts'), {
+      ...rest,
+      family_id,
+      is_active: true,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    })
+    const snap = await getDoc(ref)
+    return { id: snap.id, ...snap.data() } as BankAccount
   },
 
-  async update(id: string, form: Partial<BankAccountFormData>): Promise<BankAccount> {
-    const { data, error } = await supabase
-      .from('bank_accounts')
-      .update(form)
-      .eq('id', id)
-      .select()
-      .single()
-    if (error) throw error
-    return data
+  async update(id: string, familyId: string, data: Partial<BankAccount>): Promise<void> {
+    await updateDoc(doc(db, 'families', familyId, 'bankAccounts', id), {
+      ...data,
+      updated_at: new Date().toISOString(),
+    })
   },
 
   async setPrimary(id: string, familyId: string): Promise<void> {
-    await supabase
-      .from('bank_accounts')
-      .update({ is_primary: false })
-      .eq('family_id', familyId)
-    const { error } = await supabase
-      .from('bank_accounts')
-      .update({ is_primary: true })
-      .eq('id', id)
-    if (error) throw error
+    const accounts = await bankAccountsApi.listByFamily(familyId)
+    const batch = writeBatch(db)
+    accounts.forEach(a => {
+      batch.update(doc(db, 'families', familyId, 'bankAccounts', a.id), { is_primary: a.id === id })
+    })
+    await batch.commit()
   },
 
-  async toggleStatus(id: string, status: 'active' | 'inactive'): Promise<void> {
-    const { error } = await supabase
-      .from('bank_accounts')
-      .update({ status })
-      .eq('id', id)
-    if (error) throw error
+  async toggleStatus(id: string, isActive: boolean, familyId: string): Promise<void> {
+    await updateDoc(doc(db, 'families', familyId, 'bankAccounts', id), { is_active: isActive })
   },
 
-  async delete(id: string): Promise<void> {
-    const { error } = await supabase.from('bank_accounts').delete().eq('id', id)
-    if (error) throw error
+  async delete(id: string, familyId: string): Promise<void> {
+    await deleteDoc(doc(db, 'families', familyId, 'bankAccounts', id))
   },
 
   async getTotalBalance(familyId: string): Promise<number> {
-    const { data, error } = await supabase
-      .from('bank_accounts')
-      .select('current_balance')
-      .eq('family_id', familyId)
-      .eq('status', 'active')
-    if (error) throw error
-    return data.reduce((sum, a) => sum + (a.current_balance || 0), 0)
+    const accounts = await bankAccountsApi.listByFamily(familyId)
+    return accounts.filter(a => a.is_active).reduce((s, a) => s + (a.balance ?? 0), 0)
   },
 }

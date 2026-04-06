@@ -1,11 +1,10 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import type { User, Session } from '@supabase/supabase-js'
+import type { User } from 'firebase/auth'
 import type { Profile, Family, FamilyMemberRole } from '@/types'
 
 interface AuthState {
   user: User | null
-  session: Session | null
   profile: Profile | null
   family: Family | null
   familyRole: FamilyMemberRole | null
@@ -13,7 +12,6 @@ interface AuthState {
   isLoading: boolean
   isInitialized: boolean
   setUser: (user: User | null) => void
-  setSession: (session: Session | null) => void
   setProfile: (profile: Profile | null) => void
   setFamily: (family: Family | null) => void
   setFamilyRole: (role: FamilyMemberRole | null) => void
@@ -25,7 +23,6 @@ interface AuthState {
 
 const initialState = {
   user: null,
-  session: null,
   profile: null,
   family: null,
   familyRole: null,
@@ -39,7 +36,6 @@ export const useAuthStore = create<AuthState>()(
     set => ({
       ...initialState,
       setUser: user => set({ user }),
-      setSession: session => set({ session }),
       setProfile: profile => set({ profile }),
       setFamily: family => set({ family }),
       setFamilyRole: familyRole => set({ familyRole }),
