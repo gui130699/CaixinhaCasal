@@ -1,0 +1,159 @@
+import { useState } from 'react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { Link } from 'react-router-dom'
+import { Plus, Building2, Star, TrendingUp, MoreVertical, ArrowRight } from 'lucide-react'
+import { bankAccountsApi } from '@/api/bank-accounts.api'
+import { useAuthStore } from '@/stores/auth.store'
+import { Card, StatCard } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import { PageLoading, EmptyState } from '@/components/ui/empty-state'
+import { ConfirmModal } from '@/components/ui/modal'
+import { useToast } from '@/components/ui/toast'
+import { formatCurrency, formatDate } from '@/lib/utils'
+import CreateAccountModal from './create-account-modal'
+
+export default function BankingPage() {
+  const { family } = useAuthStore()
+  const { toast } = useToast()
+  const queryClient = useQueryClient()
+  const [showCreate, setShowCreate] = useState(false)
+  const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [settingPrimary, setSettingPrimary] = useState<string | null>(null)
+
+  const { data: accounts = [], isLoading } = useQuery({
+    queryKey: ['bank-accounts', family?.id],
+    queryFn: () => bankAccountsApi.listByFamily(family!.id),
+    enabled: !!family,
+  })
+
+  const totalBalance = accounts.reduce((s, a) => s + (a.is_active ? a.balance : 0), 0)
+  const primaryAccount = accounts.find(a => a.is_primary)
+
+  const handleDelete = async () => {
+    if (!deletingId) return
+    try {
+      await bankAccountsApi.delete(deletingId)
+      queryClient.invalidateQueries({ queryKey: ['bank-accounts'] })
+      toast({ type: 'success', message: 'Conta removida' })
+    } catch {
+      toast({ type: 'error', message: 'Erro ao remover conta' })
+    } finally {
+      setDeletingId(null)
+    }
+  }
+
+  const handleSetPrimary = async (id: string) => {
+    setSettingPrimary(id)
+    try {
+      await bankAccountsApi.setPrimary(id, family!.id)
+      queryClient.invalidateQueries({ queryKey: ['bank-accounts'] })
+      toast({ type: 'success', message: 'Conta principal atualizada' })
+    } catch {
+      toast({ type: 'error', message: 'Erro ao atualizar conta' })
+    } finally {
+      setSettingPrimary(null)
+    }
+  }
+
+  const handleToggle = async (id: string, active: boolean) => {
+    try {
+      await bankAccountsApi.toggleStatus(id, active)
+      queryClient.invalidateQueries({ queryKey: ['bank-accounts'] })
+    } catch {
+      toast({ type: 'error', message: 'Erro ao atualizar status' })
+    }
+  }
+
+  if (isLoading) return <PageLoading />
+
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Contas Bancárias</h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400">Gerencie as contas da família</p>
+        </div>
+        <Button icon={<Plus className="size-4" />} onClick={() => setShowCreate(true)}>Nova Conta</Button>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <StatCard title="Saldo Total" value={formatCurrency(totalBalance)} icon={<TrendingUp className="size-5" />} color="primary" />
+        <StatCard title="Contas Ativas" value={String(accounts.filter(a => a.is_active).length)} icon={<Building2 className="size-5" />} color="success" />
+        <StatCard title="Conta Principal" value={primaryAccount?.nickname ?? '—'} icon={<Star className="size-5" />} color="warning" />
+      </div>
+
+      {accounts.length === 0 ? (
+        <EmptyState icon={<Building2 className="size-8" />} title="Nenhuma conta cadastrada" description="Adicione uma conta bancária para começar" actionLabel="Nova Conta" onAction={() => setShowCreate(true)} />
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {accounts.map(account => (
+            <div key={account.id} className={`card ${!account.is_active ? 'opacity-60' : ''} relative group`}>
+              <div className="flex items-start justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <div className="size-9 rounded-xl bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
+                    <Building2 className="size-4 text-blue-600 dark:text-blue-400" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">{account.nickname}</p>
+                    <p className="text-xs text-gray-400">{account.bank_name}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-1">
+                  {account.is_primary && <Badge variant="warning" size="sm">Principal</Badge>}
+                  {!account.is_active && <Badge variant="default" size="sm">Inativa</Badge>}
+                </div>
+              </div>
+
+              <div className="mb-4">
+                <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{formatCurrency(account.balance)}</p>
+                {account.account_number && (
+                  <p className="text-xs text-gray-400 mt-0.5">Conta: {account.account_number}</p>
+                )}
+              </div>
+
+              <div className="flex items-center gap-2 pt-3 border-t border-gray-100 dark:border-gray-800">
+                <Link to={`/banking/${account.id}`} className="flex-1">
+                  <Button variant="ghost" size="sm" className="w-full justify-between">
+                    Ver extrato <ArrowRight className="size-3" />
+                  </Button>
+                </Link>
+                <div className="relative">
+                  <details className="group/menu">
+                    <summary className="list-none cursor-pointer p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800">
+                      <MoreVertical className="size-4 text-gray-400" />
+                    </summary>
+                    <div className="absolute right-0 bottom-8 z-10 w-44 bg-white dark:bg-gray-900 rounded-xl shadow-lg border border-gray-100 dark:border-gray-800 py-1">
+                      {!account.is_primary && (
+                        <button onClick={() => handleSetPrimary(account.id)} disabled={settingPrimary === account.id} className="w-full text-left px-4 py-2 text-xs hover:bg-gray-50 dark:hover:bg-gray-800">
+                          Definir como principal
+                        </button>
+                      )}
+                      <button onClick={() => handleToggle(account.id, !account.is_active)} className="w-full text-left px-4 py-2 text-xs hover:bg-gray-50 dark:hover:bg-gray-800">
+                        {account.is_active ? 'Desativar' : 'Ativar'}
+                      </button>
+                      <button onClick={() => setDeletingId(account.id)} className="w-full text-left px-4 py-2 text-xs text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20">
+                        Remover
+                      </button>
+                    </div>
+                  </details>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <CreateAccountModal open={showCreate} onClose={() => setShowCreate(false)} />
+      <ConfirmModal
+        open={!!deletingId}
+        onClose={() => setDeletingId(null)}
+        onConfirm={handleDelete}
+        title="Remover conta"
+        description="Esta ação não pode ser desfeita. Todos os dados da conta serão perdidos."
+        confirmLabel="Remover"
+        variant="danger"
+      />
+    </div>
+  )
+}
