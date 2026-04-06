@@ -5,6 +5,8 @@ import { AppLayout } from '@/components/layout/app-layout'
 
 // Auth pages
 import LoginPage from '@/pages/auth/login'
+import RegisterPage from '@/pages/auth/register'
+import FamilySetupPage from '@/pages/auth/family-setup'
 import ForgotPasswordPage from '@/pages/auth/forgot-password'
 import ResetPasswordPage from '@/pages/auth/reset-password'
 
@@ -32,6 +34,8 @@ export default function App() {
       <Routes>
         {/* Public routes */}
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/register" element={<RegisterPage />} />
+        <Route path="/family-setup" element={<FamilySetupPage />} />
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
 

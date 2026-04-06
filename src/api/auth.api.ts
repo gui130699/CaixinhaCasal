@@ -1,5 +1,6 @@
 import {
   signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
   signOut,
   sendPasswordResetEmail,
   updatePassword,
@@ -11,6 +12,11 @@ import { auth } from '@/lib/firebase'
 export const authApi = {
   async signIn(email: string, password: string) {
     const credential = await signInWithEmailAndPassword(auth, email, password)
+    return credential.user
+  },
+
+  async signUp(email: string, password: string) {
+    const credential = await createUserWithEmailAndPassword(auth, email, password)
     return credential.user
   },
 
