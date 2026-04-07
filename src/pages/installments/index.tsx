@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { CreditCard, Filter, CheckCircle2, AlertCircle, Clock } from 'lucide-react'
+import { CreditCard, CheckCircle2, AlertCircle, Clock, RotateCcw } from 'lucide-react'
 import { installmentsApi } from '@/api/installments.api'
 import { useAuthStore } from '@/stores/auth.store'
 import { Card, StatCard } from '@/components/ui/card'
@@ -8,11 +8,8 @@ import { Button } from '@/components/ui/button'
 import { InstallmentStatusBadge } from '@/components/ui/badge'
 import { Avatar } from '@/components/ui/avatar'
 import { PageLoading, EmptyState } from '@/components/ui/empty-state'
-import { Modal } from '@/components/ui/modal'
-import { CurrencyInput, Input } from '@/components/ui/input'
 import { useToast } from '@/components/ui/toast'
 import { formatCurrency, formatDate, formatMonthYear } from '@/lib/utils'
-import type { Installment } from '@/types'
 
 const STATUS_TABS = [
   { label: 'Todos', value: '' },
@@ -21,55 +18,14 @@ const STATUS_TABS = [
   { label: 'Atrasados', value: 'overdue' },
 ]
 
-interface PayModalProps { installment: Installment | null; onClose: () => void }
-
-function PayInstallmentModal({ installment, onClose }: PayModalProps) {
-  const { toast } = useToast()
-  const { family } = useAuthStore()
-  const queryClient = useQueryClient()
-  const [amount, setAmount] = useState(installment?.expected_amount ?? 0)
-  const [date, setDate] = useState(new Date().toISOString().slice(0, 10))
-  const [loading, setLoading] = useState(false)
-
-  const handlePay = async () => {
-    if (!installment) return
-    setLoading(true)
-    try {
-      await installmentsApi.pay(installment.id, family!.id, { paid_amount: amount, payment_date: date })
-      queryClient.invalidateQueries({ queryKey: ['installments'] })
-      toast('Parcela registrada como paga!', 'success')
-      onClose()
-    } catch (err: any) {
-      toast(err.message || 'Erro ao registrar pagamento', 'error')
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  return (
-    <Modal open={!!installment} onClose={onClose} title="Registrar Pagamento" size="sm">
-      <div className="space-y-4">
-        {installment && (
-          <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-xl text-sm">
-            <p className="font-medium">{installment.goal?.name}</p>
-            <p className="text-gray-500 text-xs mt-0.5">{formatMonthYear(installment.reference_month)} • {installment.profile?.full_name}</p>
-          </div>
-        )}
-        <CurrencyInput label="Valor Pago" value={amount} onChange={setAmount} />
-        <Input label="Data do Pagamento" type="date" value={date} onChange={e => setDate(e.target.value)} />
-        <div className="flex justify-end gap-2 pt-2">
-          <Button variant="ghost" onClick={onClose}>Cancelar</Button>
-          <Button loading={loading} onClick={handlePay} leftIcon={<CheckCircle2 className="size-4" />}>Confirmar</Button>
-        </div>
-      </div>
-    </Modal>
-  )
-}
-
 export default function InstallmentsPage() {
   const { family } = useAuthStore()
+  const queryClient = useQueryClient()
+  const { toast } = useToast()
   const [statusFilter, setStatusFilter] = useState('')
-  const [payingInstallment, setPayingInstallment] = useState<Installment | null>(null)
+  const [confirmingId, setConfirmingId] = useState<string | null>(null)
+  const [undoConfirmId, setUndoConfirmId] = useState<string | null>(null)
+  const [processingId, setProcessingId] = useState<string | null>(null)
 
   const { data: installments = [], isLoading } = useQuery({
     queryKey: ['installments', family?.id, statusFilter],
@@ -84,6 +40,45 @@ export default function InstallmentsPage() {
   const pendingTotal = pending.reduce((s, i) => s + i.expected_amount, 0)
   const paidTotal = paid.reduce((s, i) => s + i.paid_amount, 0)
   const overdueTotal = overdue.reduce((s, i) => s + i.expected_amount, 0)
+
+  const handlePay = async (installmentId: string, amount: number) => {
+    setProcessingId(installmentId)
+    try {
+      await installmentsApi.pay(installmentId, family!.id, {
+        paid_amount: amount,
+        payment_date: new Date().toISOString().slice(0, 10),
+      })
+      queryClient.invalidateQueries({ queryKey: ['installments'] })
+      toast('Parcela registrada como paga!', 'success')
+      setConfirmingId(null)
+    } catch (err: any) {
+      toast(err.message || 'Erro ao registrar pagamento', 'error')
+    } finally {
+      setProcessingId(null)
+    }
+  }
+
+  const handleRequestUndo = async (installmentId: string) => {
+    const inst = installments.find(i => i.id === installmentId)
+    if (!inst) return
+    setProcessingId(installmentId)
+    try {
+      await installmentsApi.requestUndo(installmentId, family!.id, {
+        goal_id: inst.goal_id,
+        goal_name: inst.goal?.name ?? 'Meta',
+        user_id: inst.user_id,
+        reference_month: inst.reference_month,
+        amount: inst.paid_amount,
+      })
+      queryClient.invalidateQueries({ queryKey: ['installments'] })
+      toast('Solicitação de estorno enviada ao administrador.', 'success')
+      setUndoConfirmId(null)
+    } catch (err: any) {
+      toast(err.message || 'Erro ao solicitar estorno', 'error')
+    } finally {
+      setProcessingId(null)
+    }
+  }
 
   if (isLoading) return <PageLoading />
 
@@ -117,34 +112,104 @@ export default function InstallmentsPage() {
           <EmptyState icon={<CreditCard className="size-8" />} title="Nenhuma parcela encontrada" description="Ajuste os filtros ou aguarde o próximo mês" />
         ) : (
           <div className="divide-y divide-gray-50 dark:divide-gray-800">
-            {installments.map(inst => (
-              <div key={inst.id} className="flex items-center gap-3 px-5 py-4">
-                <Avatar name={inst.profile?.full_name ?? 'U'} size="sm" />
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">{inst.goal?.name}</p>
-                  <p className="text-xs text-gray-400">{inst.profile?.full_name} • {formatMonthYear(inst.reference_month)}</p>
-                </div>
-                <div className="text-right mr-3">
-                  {inst.status === 'paid' ? (
-                    <p className="text-sm font-bold text-green-600">{formatCurrency(inst.paid_amount)}</p>
-                  ) : (
-                    <p className="text-sm font-bold text-gray-900 dark:text-gray-100">{formatCurrency(inst.expected_amount)}</p>
+            {installments.map(inst => {
+              const isConfirming = confirmingId === inst.id
+              const isUndoConfirming = undoConfirmId === inst.id
+              const isProcessing = processingId === inst.id
+              const canPay = inst.status === 'pending' || inst.status === 'overdue'
+              const canUndo = inst.status === 'paid'
+
+              return (
+                <div key={inst.id} className="px-4 py-3">
+                  <div className="flex items-center gap-3">
+                    <Avatar name={inst.profile?.full_name ?? 'U'} size="sm" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
+                        {inst.goal?.name ?? '—'}
+                      </p>
+                      <p className="text-xs text-gray-400">
+                        {inst.profile?.full_name ?? '—'} • {formatMonthYear(inst.reference_month)}
+                      </p>
+                    </div>
+                    <div className="text-right mr-2">
+                      {inst.status === 'paid' ? (
+                        <p className="text-sm font-bold text-green-600">{formatCurrency(inst.paid_amount)}</p>
+                      ) : (
+                        <p className="text-sm font-bold text-gray-900 dark:text-gray-100">{formatCurrency(inst.expected_amount)}</p>
+                      )}
+                      {inst.due_date && <p className="text-[10px] text-gray-400">Vence {formatDate(inst.due_date)}</p>}
+                    </div>
+                    <InstallmentStatusBadge status={inst.status} />
+                    {canPay && !isConfirming && (
+                      <Button size="sm" variant="secondary" onClick={() => setConfirmingId(inst.id)}>
+                        Pagar
+                      </Button>
+                    )}
+                    {canUndo && !isUndoConfirming && (
+                      <button
+                        onClick={() => setUndoConfirmId(inst.id)}
+                        className="p-1.5 rounded-lg text-gray-400 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors"
+                        title="Solicitar estorno"
+                      >
+                        <RotateCcw className="size-4" />
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Confirmação de pagamento inline */}
+                  {isConfirming && (
+                    <div className="mt-2 ml-10 flex items-center gap-2 p-2 bg-primary-50 dark:bg-primary-900/20 rounded-xl border border-primary-200 dark:border-primary-800">
+                      <p className="text-xs text-primary-700 dark:text-primary-400 flex-1">
+                        Confirmar pagamento de <strong>{formatCurrency(inst.expected_amount)}</strong>?
+                      </p>
+                      <Button
+                        size="sm"
+                        loading={isProcessing}
+                        onClick={() => handlePay(inst.id, inst.expected_amount)}
+                      >
+                        Sim
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        disabled={isProcessing}
+                        onClick={() => setConfirmingId(null)}
+                      >
+                        Não
+                      </Button>
+                    </div>
                   )}
-                  {inst.due_date && <p className="text-[10px] text-gray-400">Vence {formatDate(inst.due_date)}</p>}
-                </div>
-                <div className="flex items-center gap-2">
-                  <InstallmentStatusBadge status={inst.status} />
-                  {(inst.status === 'pending' || inst.status === 'overdue') && (
-                    <Button size="sm" variant="secondary" onClick={() => setPayingInstallment(inst)}>Pagar</Button>
+
+                  {/* Confirmação de estorno inline */}
+                  {isUndoConfirming && (
+                    <div className="mt-2 ml-10 flex items-center gap-2 p-2 bg-amber-50 dark:bg-amber-900/20 rounded-xl border border-amber-200 dark:border-amber-800">
+                      <p className="text-xs text-amber-700 dark:text-amber-400 flex-1">
+                        Solicitar estorno ao administrador?
+                      </p>
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        loading={isProcessing}
+                        onClick={() => handleRequestUndo(inst.id)}
+                      >
+                        Sim
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        disabled={isProcessing}
+                        onClick={() => setUndoConfirmId(null)}
+                      >
+                        Não
+                      </Button>
+                    </div>
                   )}
                 </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
         )}
       </Card>
-
-      <PayInstallmentModal installment={payingInstallment} onClose={() => setPayingInstallment(null)} />
     </div>
   )
 }

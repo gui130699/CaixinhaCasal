@@ -3,13 +3,15 @@
   doc,
   getDoc,
   getDocs,
+  addDoc,
   updateDoc,
   query,
   where,
   orderBy,
 } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
-import type { Installment } from '@/types'
+import type { Goal, Installment, Profile } from '@/types'
+import { goalsApi } from '@/api/goals.api'
 
 export const installmentsApi = {
   async listByFamily(
@@ -25,7 +27,32 @@ export const installmentsApi = {
     if (filters?.goal_id) results = results.filter(i => i.goal_id === filters.goal_id)
     if (filters?.user_id) results = results.filter(i => i.user_id === filters.user_id)
     if (filters?.status) results = results.filter(i => i.status === filters.status)
-    return results
+
+    // Enrich with goals
+    const goalIds = [...new Set(results.map(i => i.goal_id))]
+    const goalsMap: Record<string, Goal> = {}
+    await Promise.all(
+      goalIds.map(async id => {
+        const gs = await getDoc(doc(db, 'families', familyId, 'goals', id))
+        if (gs.exists()) goalsMap[id] = { id: gs.id, ...gs.data() } as Goal
+      })
+    )
+
+    // Enrich with profiles
+    const userIds = [...new Set(results.map(i => i.user_id))]
+    const profilesMap: Record<string, Profile> = {}
+    await Promise.all(
+      userIds.map(async uid => {
+        const ps = await getDoc(doc(db, 'profiles', uid))
+        if (ps.exists()) profilesMap[uid] = { id: ps.id, ...ps.data() } as Profile
+      })
+    )
+
+    return results.map(i => ({
+      ...i,
+      goal: goalsMap[i.goal_id],
+      profile: profilesMap[i.user_id],
+    }))
   },
 
   async listByGoal(goalId: string, familyId: string): Promise<Installment[]> {
@@ -72,7 +99,7 @@ export const installmentsApi = {
   ): Promise<void> {
     const ref = doc(db, 'families', familyId, 'installments', installmentId)
     const snap = await getDoc(ref)
-    if (!snap.exists()) throw new Error('Parcela nÃ£o encontrada')
+    if (!snap.exists()) throw new Error('Parcela não encontrada')
     const current = snap.data() as Installment
     const newPaid = (current.paid_amount ?? 0) + form.paid_amount
     const expected = current.expected_amount ?? 0
@@ -83,6 +110,44 @@ export const installmentsApi = {
       payment_method: form.payment_method ?? null,
       status,
       updated_at: new Date().toISOString(),
+    })
+
+    // Verificar se deve estender meta em aberto após última parcela paga
+    if (status === 'paid' && current.goal_id) {
+      const goalSnap = await getDoc(doc(db, 'families', familyId, 'goals', current.goal_id))
+      if (goalSnap.exists() && goalSnap.data().is_open_ended) {
+        const pendingSnap = await getDocs(
+          query(
+            collection(db, 'families', familyId, 'installments'),
+            where('goal_id', '==', current.goal_id),
+            where('status', 'in', ['pending', 'partial', 'overdue'])
+          )
+        )
+        if (pendingSnap.empty) {
+          await goalsApi.extendOpenEnded(current.goal_id, familyId)
+        }
+      }
+    }
+  },
+
+  async requestUndo(
+    installmentId: string,
+    familyId: string,
+    data: {
+      goal_id: string
+      goal_name: string
+      user_id: string
+      reference_month: string
+      amount: number
+    }
+  ): Promise<void> {
+    await addDoc(collection(db, 'families', familyId, 'requests'), {
+      type: 'undo_payment',
+      installment_id: installmentId,
+      family_id: familyId,
+      ...data,
+      status: 'pending',
+      created_at: new Date().toISOString(),
     })
   },
 }

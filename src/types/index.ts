@@ -214,6 +214,26 @@ export interface AuditLog {
   actor?: Profile
 }
 
+export type GoalRequestStatus = 'pending' | 'approved' | 'rejected'
+
+export interface GoalRequest {
+  id: string
+  family_id: string
+  type: 'undo_payment'
+  installment_id: string
+  goal_id: string
+  goal_name: string
+  user_id: string
+  reference_month: string
+  amount: number
+  status: GoalRequestStatus
+  reviewed_by?: string | null
+  reviewed_at?: string | null
+  created_at: string
+  // Joining
+  profile?: Profile
+}
+
 // ============================================================
 // DTOs (Data Transfer Objects) para formulários
 // ============================================================

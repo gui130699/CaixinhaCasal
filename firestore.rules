@@ -82,6 +82,13 @@ service cloud.firestore {
       match /installments/{installmentId} {
         allow read, write: if isFamilyMember(familyId);
       }
+
+      // Solicitações (estorno etc.)
+      match /requests/{requestId} {
+        allow read: if isFamilyMember(familyId);
+        allow create: if isFamilyMember(familyId);
+        allow update: if isFamilyAdmin(familyId);
+      }
     }
 
     // Regras legadas na raiz (mantidas por compatibilidade)

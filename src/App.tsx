@@ -28,6 +28,7 @@ import AdminPage from '@/pages/admin'
 import AdminFamiliesPage from '@/pages/admin/families'
 import AdminUsersPage from '@/pages/admin/users'
 import AdminAuditPage from '@/pages/admin/audit'
+import RequestsPage from '@/pages/requests'
 
 export default function App() {
   return (
@@ -54,6 +55,7 @@ export default function App() {
             <Route path="reports" element={<ReportsPage />} />
             <Route path="profile" element={<ProfilePage />} />
             <Route path="settings" element={<SettingsPage />} />
+            <Route path="requests" element={<RequestsPage />} />
 
             {/* Admin-only routes */}
             <Route element={<ProtectedRoute requireAdmin />}>

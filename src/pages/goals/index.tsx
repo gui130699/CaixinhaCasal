@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Plus, Target, Search, Filter } from 'lucide-react'
+import { Plus, Target, Search, Pencil } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { useAuthStore } from '@/stores/auth.store'
 import { goalsApi } from '@/api/goals.api'
@@ -12,7 +12,8 @@ import { GoalStatusBadge } from '@/components/ui/badge'
 import { EmptyState } from '@/components/ui/empty-state'
 import { formatCurrency, formatDate, calculateProgress } from '@/lib/utils'
 import { CreateGoalModal } from './create-goal-modal'
-import type { GoalStatus } from '@/types'
+import { EditGoalModal } from './edit-goal-modal'
+import type { Goal, GoalStatus } from '@/types'
 
 const statusFilters: { label: string; value: GoalStatus | 'all' }[] = [
   { label: 'Todas', value: 'all' },
@@ -28,6 +29,7 @@ export default function GoalsPage() {
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState<GoalStatus | 'all'>('all')
   const [showCreate, setShowCreate] = useState(false)
+  const [editGoal, setEditGoal] = useState<Goal | null>(null)
 
   const { data: goals = [], isLoading } = useQuery({
     queryKey: ['goals', family?.id],
@@ -109,7 +111,18 @@ export default function GoalsPage() {
                         <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 line-clamp-1">{goal.description}</p>
                       )}
                     </div>
-                    <GoalStatusBadge status={goal.status} />
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <GoalStatusBadge status={goal.status} />
+                      {canManage && goal.status === 'active' && (
+                        <button
+                          onClick={e => { e.preventDefault(); e.stopPropagation(); setEditGoal(goal) }}
+                          className="p-1.5 rounded-lg text-gray-400 hover:text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-colors"
+                          title="Editar meta"
+                        >
+                          <Pencil className="size-3.5" />
+                        </button>
+                      )}
+                    </div>
                   </div>
 
                   <div className="mb-4">
@@ -163,6 +176,18 @@ export default function GoalsPage() {
           onSuccess={() => {
             queryClient.invalidateQueries({ queryKey: ['goals', family?.id] })
             setShowCreate(false)
+          }}
+        />
+      )}
+
+      {editGoal && (
+        <EditGoalModal
+          open={!!editGoal}
+          goal={editGoal}
+          onClose={() => setEditGoal(null)}
+          onSuccess={() => {
+            queryClient.invalidateQueries({ queryKey: ['goals', family?.id] })
+            setEditGoal(null)
           }}
         />
       )}

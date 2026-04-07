@@ -4,7 +4,7 @@ import { Dialog, Transition } from '@headlessui/react'
 import {
   LayoutDashboard, Target, Building2, CreditCard, ArrowLeftRight,
   TrendingUp, BarChart3, Users, Settings, LogOut, X, PiggyBank,
-  Shield, FileText
+  Shield, FileText, Inbox
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useAuthStore } from '@/stores/auth.store'
@@ -45,7 +45,7 @@ function NavItem({ to, icon: Icon, label, end, onClick }: { to: string; icon: Re
 }
 
 function SidebarContent({ onClose }: { onClose?: () => void }) {
-  const { profile, family, isMasterAdmin } = useAuthStore()
+  const { profile, family, isMasterAdmin, familyRole } = useAuthStore()
   const navigate = useNavigate()
 
   const handleLogout = async () => {
@@ -76,6 +76,15 @@ function SidebarContent({ onClose }: { onClose?: () => void }) {
         {navItems.map(item => (
           <NavItem key={item.to} {...item} onClick={onClose} />
         ))}
+
+        {(familyRole === 'admin' || isMasterAdmin) && (
+          <>
+            <div className="pt-4 pb-1 px-3">
+              <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Família</p>
+            </div>
+            <NavItem to="/requests" icon={Inbox} label="Solicitações" onClick={onClose} />
+          </>
+        )}
 
         {isMasterAdmin && (
           <>
