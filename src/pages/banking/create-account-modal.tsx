@@ -9,6 +9,7 @@ import { Modal } from '@/components/ui/modal'
 import { Input, CurrencyInput } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { useToast } from '@/components/ui/toast'
+import { BankSelector } from '@/components/ui/bank-selector'
 
 interface Props { open: boolean; onClose: () => void }
 
@@ -44,7 +45,15 @@ export default function CreateAccountModal({ open, onClose }: Props) {
     <Modal open={open} onClose={handleClose} title="Nova Conta Bancária" size="md">
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
         <Input label="Apelido da Conta" placeholder="Ex: Conta Principal, Poupança..." error={errors.nickname?.message} {...register('nickname')} />
-        <Input label="Banco" placeholder="Ex: Nubank, Itaú, Bradesco..." error={errors.bank_name?.message} {...register('bank_name')} />
+        <BankSelector
+          label="Banco"
+          error={errors.bank_name?.message}
+          value={watch('bank_name') ?? ''}
+          onSelect={({ code, name }) => {
+            setValue('bank_name', name, { shouldValidate: true })
+            setValue('bank_code', code)
+          }}
+        />
         <div className="grid grid-cols-2 gap-3">
           <Input label="Agência" placeholder="0001" {...register('agency')} />
           <Input label="Número da Conta" placeholder="00000-0" {...register('account_number')} />
