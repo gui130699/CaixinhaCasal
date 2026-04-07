@@ -26,7 +26,7 @@ export default function BankingPage() {
     enabled: !!family,
   })
 
-  const totalBalance = accounts.reduce((s, a) => s + (a.status === 'active' ? a.current_balance : 0), 0)
+  const totalBalance = accounts.reduce((s, a) => s + (a.status === 'active' ? (a.current_balance ?? 0) : 0), 0)
   const primaryAccount = accounts.find(a => a.is_primary)
 
   const handleDelete = async () => {

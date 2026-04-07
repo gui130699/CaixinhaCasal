@@ -1,13 +1,9 @@
 import { useQuery } from '@tanstack/react-query'
 import {
-  Wallet, Target, TrendingUp, AlertCircle, CreditCard,
+  Wallet, Target, AlertCircle, CreditCard,
   ArrowUpRight, Building2, Calendar, RefreshCw
 } from 'lucide-react'
-import {
-  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
-  ResponsiveContainer, BarChart, Bar, Legend
-} from 'recharts'
-import { format, startOfMonth, subMonths } from 'date-fns'
+import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { useAuthStore } from '@/stores/auth.store'
 import { bankAccountsApi } from '@/api/bank-accounts.api'
@@ -64,13 +60,6 @@ export default function DashboardPage() {
   const monthlyPaid = currentMonthInstallments.filter(i => i.status === 'paid').reduce((s, i) => s + i.paid_amount, 0)
   const monthlyPending = currentMonthInstallments.filter(i => ['pending', 'partial', 'overdue'].includes(i.status)).reduce((s, i) => s + (i.expected_amount - i.paid_amount), 0)
   const overdueAmount = overdueInstallments.reduce((s, i) => s + (i.expected_amount - i.paid_amount), 0)
-
-  // Gerar dados do gráfico dos últimos 6 meses  
-  const chartData = Array.from({ length: 6 }, (_, i) => {
-    const month = subMonths(startOfMonth(new Date()), 5 - i)
-    const label = format(month, 'MMM', { locale: ptBR })
-    return { month: label, saldo: totalBalance * (0.7 + i * 0.06), pago: monthlyPaid * (0.5 + i * 0.1) }
-  })
 
   const greetingHour = new Date().getHours()
   const greeting = greetingHour < 12 ? 'Bom dia' : greetingHour < 18 ? 'Boa tarde' : 'Boa noite'
@@ -134,59 +123,6 @@ export default function DashboardPage() {
           color={monthlyPending > 0 ? 'warning' : 'default'}
           loading={isLoading}
         />
-      </div>
-
-      {/* Charts row */}
-      <div className="grid md:grid-cols-5 gap-4">
-        {/* Balance chart */}
-        <div className="card p-5 md:col-span-3">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Evolução do Saldo</h3>
-              <p className="text-xs text-gray-500 dark:text-gray-400">Últimos 6 meses</p>
-            </div>
-            <TrendingUp className="size-4 text-primary-500" />
-          </div>
-          <div className="h-48">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={chartData}>
-                <defs>
-                  <linearGradient id="colorSaldo" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#4f46e5" stopOpacity={0.15} />
-                    <stop offset="95%" stopColor="#4f46e5" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                <XAxis dataKey="month" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={v => `R$${(v/1000).toFixed(0)}k`} />
-                <Tooltip formatter={(v: number) => [formatCurrency(v), 'Saldo']} />
-                <Area type="monotone" dataKey="saldo" stroke="#4f46e5" strokeWidth={2} fill="url(#colorSaldo)" />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-
-        {/* Monthly chart */}
-        <div className="card p-5 md:col-span-2">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Pagamentos</h3>
-              <p className="text-xs text-gray-500 dark:text-gray-400">Meses recentes</p>
-            </div>
-          </div>
-          <div className="h-48">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={chartData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                <XAxis dataKey="month" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={v => `R$${(v/1000).toFixed(0)}k`} />
-                <Tooltip formatter={(v: number) => [formatCurrency(v)]} />
-                <Legend iconSize={8} wrapperStyle={{ fontSize: '11px' }} />
-                <Bar dataKey="pago" name="Pago" fill="#22c55e" radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
       </div>
 
       {/* Goals + Accounts + Recent */}
