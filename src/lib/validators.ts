@@ -113,18 +113,17 @@ export const payInstallmentSchema = z.object({
 // Transaction
 // ============================================================
 export const createTransactionSchema = z.object({
-  type: z.enum([
-    'deposit', 'extra_deposit', 'advance_installment',
-    'manual_adjustment', 'balance_correction', 'interest',
-    'withdrawal', 'transfer_in', 'transfer_out',
-  ]),
+  type: z.enum(['deposit', 'withdrawal', 'transfer']),
   amount: positiveNumber(),
   transaction_date: requiredString('Data obrigatória'),
   description: requiredString('Descrição obrigatória').max(120),
   notes: z.string().max(300).optional(),
-  bank_account_id: z.string().uuid().optional(),
-  goal_id: z.string().uuid().optional(),
-})
+  bank_account_id: z.string().min(1, 'Selecione uma conta'),
+  to_bank_account_id: z.string().optional(),
+}).refine(
+  d => d.type !== 'transfer' || (!!d.to_bank_account_id && d.to_bank_account_id !== d.bank_account_id),
+  { message: 'Selecione uma conta de destino diferente da origem', path: ['to_bank_account_id'] }
+)
 
 // ============================================================
 // Interest Rate
