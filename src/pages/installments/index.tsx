@@ -203,48 +203,48 @@ export default function InstallmentsPage() {
 
               return (
                 <div key={inst.id} className="px-4 py-3 space-y-2">
-                  {/* Linha principal — tudo inline, sem empilhar */}
-                  <div className="flex items-center gap-2 min-w-0">
+                  {/* Linha principal: 2 linhas internas para não sobrepor */}
+                  <div className="flex items-start justify-between gap-3">
+                    {/* Coluna esquerda: nome da meta + info secundária */}
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-baseline gap-1.5 min-w-0">
-                        <span className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
-                          {inst.goal?.name ?? '—'}
-                        </span>
-                        <span className="text-xs text-gray-400 shrink-0">
-                          {formatMonthYear(inst.reference_month)}
-                        </span>
+                      <p className="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate leading-snug">
+                        {inst.goal?.name ?? '—'}
+                      </p>
+                      <p className="text-xs text-gray-400 mt-0.5">
+                        {formatMonthYear(inst.reference_month)}
                         {showAllStatus && inst.profile?.full_name && (
-                          <span className="text-xs text-primary-600 dark:text-primary-400 shrink-0 truncate">
-                            · {inst.profile.full_name.split(' ')[0]}
-                          </span>
+                          <span className="text-primary-600 dark:text-primary-400"> · {inst.profile.full_name.split(' ')[0]}</span>
                         )}
-                      </div>
+                      </p>
                       {inst.due_date && (
                         <p className="text-[10px] text-gray-400">Vence {formatDate(inst.due_date)}</p>
                       )}
                     </div>
 
-                    <div className="flex items-center gap-2 shrink-0">
+                    {/* Coluna direita: valor + badge + ação — empilhados verticalmente */}
+                    <div className="flex flex-col items-end gap-1 shrink-0">
                       {inst.status === 'paid' ? (
                         <span className="text-sm font-bold text-green-600">{formatCurrency(inst.paid_amount)}</span>
                       ) : (
                         <span className="text-sm font-bold text-gray-900 dark:text-gray-100">{formatCurrency(inst.expected_amount)}</span>
                       )}
-                      <InstallmentStatusBadge status={inst.status} />
-                      {canPay && !isConfirming && (
-                        <Button size="sm" variant="secondary" onClick={() => setConfirmingId(inst.id)}>
-                          Pagar
-                        </Button>
-                      )}
-                      {canUndo && !isUndoConfirming && (
-                        <button
-                          onClick={() => setUndoConfirmId(inst.id)}
-                          className="p-1.5 rounded-lg text-gray-400 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors"
-                          title="Solicitar estorno"
-                        >
-                          <RotateCcw className="size-3.5" />
-                        </button>
-                      )}
+                      <div className="flex items-center gap-1.5">
+                        <InstallmentStatusBadge status={inst.status} />
+                        {canPay && !isConfirming && (
+                          <Button size="sm" variant="secondary" onClick={() => setConfirmingId(inst.id)}>
+                            Pagar
+                          </Button>
+                        )}
+                        {canUndo && !isUndoConfirming && (
+                          <button
+                            onClick={() => setUndoConfirmId(inst.id)}
+                            className="p-1.5 rounded-lg text-gray-400 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors"
+                            title="Solicitar estorno"
+                          >
+                            <RotateCcw className="size-3.5" />
+                          </button>
+                        )}
+                      </div>
                     </div>
                   </div>
 
