@@ -15,13 +15,16 @@ import type { Goal, GoalMember, Installment } from '@/types'
 import type { CreateGoalFormData } from '@/lib/validators'
 import { calculateInstallment, calculateMonths } from '@/lib/utils'
 
-function generateInstallments(goalId: string, familyId: string, startDate: string, months: number, memberSchedule: { userId: string; amount: number }[]) {
+function generateInstallments(goalId: string, familyId: string, firstInstallmentDate: string, months: number, memberSchedule: { userId: string; amount: number }[]) {
   const installs: Omit<Installment, 'id'>[] = []
+  const base = new Date(firstInstallmentDate + 'T00:00:00')
+  const dueDay = base.getDate()
   for (let i = 0; i < months; i++) {
-    const d = new Date(startDate)
+    const d = new Date(base)
     d.setMonth(d.getMonth() + i)
-    const ref = d.toISOString().substring(0, 7)
-    const due = new Date(d.getFullYear(), d.getMonth() + 1, 5).toISOString().substring(0, 10)
+    const ref = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+    const maxDay = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate()
+    const due = new Date(d.getFullYear(), d.getMonth(), Math.min(dueDay, maxDay)).toISOString().substring(0, 10)
     memberSchedule.forEach(ms => {
       installs.push({
         goal_id: goalId,
@@ -57,58 +60,80 @@ export const goalsApi = {
   },
 
   async create(userId: string, familyId: string, form: CreateGoalFormData): Promise<Goal> {
-    const months =
-      form.calculation_mode === 'by_months'
-        ? (form.months_count ?? 1)
-        : calculateMonths(form.target_amount, form.installment_amount ?? 1)
+    let months: number
+    let installmentTotal: number
+    let targetAmount: number | null
 
-    const installment =
-      form.calculation_mode === 'by_months'
-        ? calculateInstallment(form.target_amount, form.months_count ?? 1)
-        : (form.installment_amount ?? 0)
+    if (form.mode === 'monthly_value') {
+      installmentTotal = form.monthly_amount ?? 0
+      months = form.months_count ?? 0
+      targetAmount = months > 0 ? installmentTotal * months : null
+    } else {
+      targetAmount = form.target_amount ?? 0
+      if (form.total_calc_mode === 'by_installment') {
+        installmentTotal = form.installment_amount ?? 0
+        months = calculateMonths(targetAmount, installmentTotal)
+      } else {
+        months = form.total_months ?? 1
+        installmentTotal = calculateInstallment(targetAmount, months)
+      }
+    }
 
-    const startDate = new Date(form.start_date)
-    const targetDate = new Date(startDate)
-    targetDate.setMonth(targetDate.getMonth() + months)
+    const firstInstallDate = form.first_installment_date
+    let targetDate: string | null = null
+    if (months > 0) {
+      const d = new Date(firstInstallDate + 'T00:00:00')
+      d.setMonth(d.getMonth() + months - 1)
+      targetDate = d.toISOString().substring(0, 10)
+    }
+
+    // Build participants list
+    const participants = (form.participant_ids ?? [userId]).map(uid => ({
+      user_id: uid,
+      participation_percent: form.percentages?.[uid] ?? Math.round(100 / (form.participant_ids?.length ?? 1)),
+      expected_monthly_amount: Math.round(installmentTotal * ((form.percentages?.[uid] ?? Math.round(100 / (form.participant_ids?.length ?? 1))) / 100) * 100) / 100,
+    }))
 
     const ref = await addDoc(collection(db, 'families', familyId, 'goals'), {
       family_id: familyId,
-      bank_account_id: form.bank_account_id ?? null,
+      bank_account_id: null,
       name: form.name,
       description: form.description ?? null,
-      target_amount: form.target_amount,
-      initial_amount: form.initial_amount ?? 0,
-      current_balance: form.initial_amount ?? 0,
-      remaining_amount: form.target_amount - (form.initial_amount ?? 0),
-      start_date: form.start_date,
-      target_date: targetDate.toISOString().substring(0, 10),
-      months_count: months,
-      installment_amount: installment,
-      calculation_mode: form.calculation_mode,
+      target_amount: targetAmount ?? installmentTotal * 12,
+      initial_amount: 0,
+      current_balance: 0,
+      remaining_amount: targetAmount ?? installmentTotal * 12,
+      start_date: firstInstallDate,
+      first_installment_date: firstInstallDate,
+      target_date: targetDate,
+      months_count: months > 0 ? months : null,
+      installment_amount: installmentTotal,
+      calculation_mode: form.mode,
+      is_open_ended: months === 0,
       status: 'active',
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     })
 
-    const members = [{ user_id: userId, expected_monthly_amount: installment, participation_percent: 100 }]
-
     await Promise.all(
-      members.map(m =>
+      participants.map(m =>
         setDoc(doc(db, 'families', familyId, 'goals', ref.id, 'members', m.user_id), {
           goal_id: ref.id,
           user_id: m.user_id,
           expected_monthly_amount: m.expected_monthly_amount,
           participation_percent: m.participation_percent,
+          status: 'active',
+          joined_at: new Date().toISOString(),
+          created_at: new Date().toISOString(),
         })
       )
     )
 
-    // Gerar cronograma
-    const memberSchedule = members.map(m => ({ userId: m.user_id, amount: m.expected_monthly_amount }))
-    const installs = generateInstallments(ref.id, familyId, form.start_date, months, memberSchedule)
-    await Promise.all(
-      installs.map(inst => addDoc(collection(db, 'families', familyId, 'installments'), inst))
-    )
+    if (months > 0) {
+      const memberSchedule = participants.map(m => ({ userId: m.user_id, amount: m.expected_monthly_amount }))
+      const installs = generateInstallments(ref.id, familyId, firstInstallDate, months, memberSchedule)
+      await Promise.all(installs.map(inst => addDoc(collection(db, 'families', familyId, 'installments'), inst)))
+    }
 
     const snap = await getDoc(ref)
     return { id: snap.id, ...snap.data() } as Goal

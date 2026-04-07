@@ -79,24 +79,32 @@ export const createGoalSchema = z
   .object({
     name: requiredString('Nome da meta obrigatório').max(80),
     description: z.string().max(300).optional(),
-    target_amount: positiveNumber('Valor objetivo deve ser maior que zero'),
-    initial_amount: z.number().min(0).default(0),
-    start_date: requiredString('Data de início obrigatória'),
-    calculation_mode: z.enum(['by_months', 'by_installment']),
-    months_count: z.number().int().positive().optional(),
-    installment_amount: z.number().positive().optional(),
-    bank_account_id: z.string().uuid().optional(),
+    first_installment_date: requiredString('Data da primeira parcela obrigatória'),
+    mode: z.enum(['monthly_value', 'total_value']),
+    // monthly_value mode
+    monthly_amount: z.number().min(0).optional(),
+    months_count: z.number().int().min(0).optional(), // 0 = em aberto
+    // total_value mode
+    target_amount: z.number().min(0).optional(),
+    total_calc_mode: z.enum(['by_months', 'by_installment']).optional(),
+    total_months: z.number().int().positive().optional(),
+    installment_amount: z.number().min(0).optional(),
+    // participants
+    participant_ids: z.array(z.string()).min(1, 'Selecione ao menos um participante'),
+    percentages: z.record(z.string(), z.number()),
   })
-  .refine(
-    d => {
-      if (d.calculation_mode === 'by_months') return !!d.months_count && d.months_count > 0
-      return !!d.installment_amount && d.installment_amount > 0
-    },
-    {
-      message: 'Informe a quantidade de meses ou o valor da parcela',
-      path: ['months_count'],
-    }
-  )
+  .refine(d => d.mode !== 'monthly_value' || (d.monthly_amount ?? 0) > 0, {
+    message: 'Informe o valor mensal', path: ['monthly_amount'],
+  })
+  .refine(d => d.mode !== 'total_value' || (d.target_amount ?? 0) > 0, {
+    message: 'Informe o valor total', path: ['target_amount'],
+  })
+  .refine(d => !(d.mode === 'total_value' && d.total_calc_mode === 'by_months') || (d.total_months ?? 0) > 0, {
+    message: 'Informe a quantidade de meses', path: ['total_months'],
+  })
+  .refine(d => !(d.mode === 'total_value' && d.total_calc_mode === 'by_installment') || (d.installment_amount ?? 0) > 0, {
+    message: 'Informe o valor da parcela', path: ['installment_amount'],
+  })
 
 // ============================================================
 // Installment
