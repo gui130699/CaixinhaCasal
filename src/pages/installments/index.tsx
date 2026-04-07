@@ -198,8 +198,8 @@ export default function InstallmentsPage() {
               const isUndoConfirming = undoConfirmId === inst.id
               const isProcessing = processingId === inst.id
               const isOwn = inst.user_id === user?.uid
-              const canPay = isOwn && (inst.status === 'pending' || inst.status === 'overdue')
-              const canUndo = isOwn && inst.status === 'paid'
+              const canPay = !showAllStatus && isOwn && (inst.status === 'pending' || inst.status === 'overdue')
+              const canUndo = !showAllStatus && isOwn && inst.status === 'paid'
 
               return (
                 <div key={inst.id} className="px-4 py-3 space-y-2">
