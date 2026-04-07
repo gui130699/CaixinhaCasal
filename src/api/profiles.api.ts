@@ -8,8 +8,7 @@ import {
   orderBy,
   query,
 } from 'firebase/firestore'
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage'
-import { db, storage } from '@/lib/firebase'
+import { db } from '@/lib/firebase'
 import type { Profile } from '@/types'
 
 export const profilesApi = {
@@ -51,17 +50,5 @@ export const profilesApi = {
   async listAllWithEmail(): Promise<Profile[]> {
     const snap = await getDocs(query(collection(db, 'profiles'), orderBy('full_name')))
     return snap.docs.map(d => ({ id: d.id, ...d.data() })) as Profile[]
-  },
-
-  async uploadAvatar(userId: string, file: File): Promise<string> {
-    const ext = file.name.split('.').pop() ?? 'jpg'
-    const storageRef = ref(storage, `avatars/${userId}.${ext}`)
-    await uploadBytes(storageRef, file, { contentType: file.type })
-    const url = await getDownloadURL(storageRef)
-    await updateDoc(doc(db, 'profiles', userId), {
-      avatar_url: url,
-      updated_at: new Date().toISOString(),
-    })
-    return url
   },
 }
