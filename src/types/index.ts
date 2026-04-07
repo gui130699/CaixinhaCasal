@@ -45,6 +45,7 @@ export interface Family {
   description?: string | null
   status: FamilyStatus
   invite_code?: string | null
+  invite_code_expires_at?: string | null
   created_at: string
   updated_at: string
 }

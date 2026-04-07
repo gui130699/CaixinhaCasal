@@ -2,9 +2,10 @@ import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useQueryClient } from '@tanstack/react-query'
-import { User, Lock, Camera } from 'lucide-react'
+import { User, Lock, Camera, Users, Copy, Check, RefreshCw, Clock } from 'lucide-react'
 import { profilesApi } from '@/api/profiles.api'
 import { authApi } from '@/api/auth.api'
+import { familiesApi } from '@/api/families.api'
 import { useAuthStore } from '@/stores/auth.store'
 import { z } from 'zod'
 import { Card } from '@/components/ui/card'
@@ -12,6 +13,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Avatar } from '@/components/ui/avatar'
 import { useToast } from '@/components/ui/toast'
+import { formatDate } from '@/lib/utils'
 
 const profileSchema = z.object({
   full_name: z.string().min(2, 'Nome obrigatório'),
@@ -27,10 +29,13 @@ type ProfileFormData = z.infer<typeof profileSchema>
 type PasswordFormData = z.infer<typeof passwordSchema>
 
 export default function ProfilePage() {
-  const { profile, family, familyRole, setProfile } = useAuthStore()
+  const { profile, family, familyRole, setProfile, setFamily } = useAuthStore()
   const { toast } = useToast()
   const [loadingProfile, setLoadingProfile] = useState(false)
   const [loadingPassword, setLoadingPassword] = useState(false)
+  const [loadingCode, setLoadingCode] = useState(false)
+  const [copied, setCopied] = useState(false)
+  const [expiresInHours, setExpiresInHours] = useState(24)
 
   const profileForm = useForm<ProfileFormData>({
     resolver: zodResolver(profileSchema),
@@ -65,6 +70,31 @@ export default function ProfilePage() {
       setLoadingPassword(false)
     }
   }
+
+  const handleCopyCode = () => {
+    if (!family?.invite_code) return
+    navigator.clipboard.writeText(family.invite_code)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
+
+  const handleGenerateCode = async () => {
+    if (!family) return
+    setLoadingCode(true)
+    try {
+      const updated = await familiesApi.regenerateInviteCode(family.id, expiresInHours)
+      setFamily(updated)
+      toast('Código de convite gerado!', 'success')
+    } catch (err: any) {
+      toast(err.message || 'Erro ao gerar código', 'error')
+    } finally {
+      setLoadingCode(false)
+    }
+  }
+
+  const isCodeExpired = family?.invite_code_expires_at
+    ? new Date(family.invite_code_expires_at) < new Date()
+    : false
 
   return (
     <div className="space-y-6 max-w-2xl mx-auto">
@@ -116,6 +146,78 @@ export default function ProfilePage() {
           </div>
         </form>
       </Card>
+
+      {/* Código de Convite da Família */}
+      {family && familyRole === 'admin' && (
+        <Card padding="lg">
+          <div className="flex items-center gap-2 mb-4">
+            <Users className="size-4 text-gray-400" />
+            <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Código de Convite</h3>
+          </div>
+
+          <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">
+            Compartilhe este código para convidar seu parceiro(a) a entrar na família <strong>{family.name}</strong>.
+          </p>
+
+          {/* Código atual */}
+          {family.invite_code ? (
+            <div className={`flex items-center gap-3 p-3 rounded-xl border mb-3 ${isCodeExpired ? 'bg-red-50 border-red-200 dark:bg-red-900/20 dark:border-red-800' : 'bg-gray-50 border-gray-200 dark:bg-gray-800 dark:border-gray-700'}`}>
+              <p className={`font-mono text-xl font-bold tracking-widest flex-1 ${isCodeExpired ? 'text-red-400 line-through' : 'text-gray-900 dark:text-gray-100'}`}>
+                {family.invite_code}
+              </p>
+              {!isCodeExpired && (
+                <button type="button" onClick={handleCopyCode} className="text-gray-400 hover:text-primary-600 transition-colors">
+                  {copied ? <Check className="size-5 text-green-500" /> : <Copy className="size-5" />}
+                </button>
+              )}
+            </div>
+          ) : (
+            <div className="p-3 rounded-xl border border-dashed border-gray-300 dark:border-gray-700 mb-3 text-center">
+              <p className="text-sm text-gray-400">Nenhum código gerado</p>
+            </div>
+          )}
+
+          {/* Status de expiração */}
+          {family.invite_code && (
+            <div className="flex items-center gap-1.5 mb-4">
+              <Clock className="size-3.5 text-gray-400" />
+              {isCodeExpired ? (
+                <span className="text-xs text-red-500 font-medium">Código expirado</span>
+              ) : family.invite_code_expires_at ? (
+                <span className="text-xs text-gray-500">Expira em {formatDate(family.invite_code_expires_at, 'dd/MM/yyyy HH:mm')}</span>
+              ) : (
+                <span className="text-xs text-gray-500">Sem data de expiração</span>
+              )}
+            </div>
+          )}
+
+          {/* Gerar novo código */}
+          <div className="border-t border-gray-100 dark:border-gray-800 pt-4 space-y-3">
+            <label className="text-xs font-medium text-gray-600 dark:text-gray-400">Validade do novo código</label>
+            <div className="grid grid-cols-4 gap-2">
+              {[{ h: 24, label: '24h' }, { h: 48, label: '48h' }, { h: 168, label: '7 dias' }, { h: 720, label: '30 dias' }].map(opt => (
+                <button
+                  key={opt.h}
+                  type="button"
+                  onClick={() => setExpiresInHours(opt.h)}
+                  className={`py-1.5 text-xs rounded-lg border font-medium transition-colors ${expiresInHours === opt.h ? 'bg-primary-600 text-white border-primary-600' : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:border-primary-400'}`}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+            <Button
+              className="w-full"
+              variant="secondary"
+              loading={loadingCode}
+              leftIcon={<RefreshCw className="size-4" />}
+              onClick={handleGenerateCode}
+            >
+              Gerar novo código
+            </Button>
+          </div>
+        </Card>
+      )}
     </div>
   )
 }

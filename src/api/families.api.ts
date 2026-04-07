@@ -98,6 +98,24 @@ export const familiesApi = {
     const q = query(collection(db, 'families'), where('invite_code', '==', code))
     const snap = await getDocs(q)
     if (snap.empty) return null
-    return { id: snap.docs[0].id, ...snap.docs[0].data() } as Family
+    const family = { id: snap.docs[0].id, ...snap.docs[0].data() } as Family
+    // Verifica expiração
+    if (family.invite_code_expires_at && new Date(family.invite_code_expires_at) < new Date()) {
+      return null // código expirado
+    }
+    return family
+  },
+
+  async regenerateInviteCode(familyId: string, expiresInHours: number): Promise<Family> {
+    const expiresAt = new Date()
+    expiresAt.setHours(expiresAt.getHours() + expiresInHours)
+    const updates = {
+      invite_code: generateInviteCode(),
+      invite_code_expires_at: expiresAt.toISOString(),
+      updated_at: new Date().toISOString(),
+    }
+    await updateDoc(doc(db, 'families', familyId), updates)
+    const snap = await getDoc(doc(db, 'families', familyId))
+    return { id: snap.id, ...snap.data() } as Family
   },
 }
