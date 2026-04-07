@@ -21,6 +21,7 @@ import TransactionsPage from '@/pages/transactions'
 import InterestPage from '@/pages/interest'
 import ReportsPage from '@/pages/reports'
 import ProfilePage from '@/pages/profile'
+import SettingsPage from '@/pages/settings'
 
 // Admin pages
 import AdminPage from '@/pages/admin'
@@ -52,6 +53,7 @@ export default function App() {
             <Route path="interest" element={<InterestPage />} />
             <Route path="reports" element={<ReportsPage />} />
             <Route path="profile" element={<ProfilePage />} />
+            <Route path="settings" element={<SettingsPage />} />
 
             {/* Admin-only routes */}
             <Route element={<ProtectedRoute requireAdmin />}>

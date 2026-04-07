@@ -20,6 +20,7 @@ const navItems = [
   { to: '/transactions', icon: ArrowLeftRight, label: 'Movimentações' },
   { to: '/interest', icon: TrendingUp, label: 'Juros & Rendimentos' },
   { to: '/reports', icon: BarChart3, label: 'Relatórios' },
+  { to: '/settings', icon: Settings, label: 'Configurações' },
 ]
 
 const adminItems = [

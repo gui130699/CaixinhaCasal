@@ -51,7 +51,7 @@ export function Header({ title }: { title?: string }) {
           </span>
         </NavLink>
 
-        <NavLink to="/profile" className="p-2 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+        <NavLink to="/settings" className="p-2 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
           <Settings className="size-4" />
         </NavLink>
       </div>
