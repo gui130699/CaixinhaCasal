@@ -92,6 +92,7 @@ export const createGoalSchema = z
     // participants
     participant_ids: z.array(z.string()).min(1, 'Selecione ao menos um participante'),
     percentages: z.record(z.string(), z.number()),
+    bank_account_id: z.string().min(1, 'Selecione a conta vinculada'),
   })
   .refine(d => d.mode !== 'monthly_value' || (d.monthly_amount ?? 0) > 0, {
     message: 'Informe o valor mensal', path: ['monthly_amount'],

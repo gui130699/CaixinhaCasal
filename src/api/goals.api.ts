@@ -96,7 +96,7 @@ export const goalsApi = {
 
     const ref = await addDoc(collection(db, 'families', familyId, 'goals'), {
       family_id: familyId,
-      bank_account_id: null,
+      bank_account_id: form.bank_account_id ?? null,
       name: form.name,
       description: form.description ?? null,
       target_amount: targetAmount ?? installmentTotal * 12,

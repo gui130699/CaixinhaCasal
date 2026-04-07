@@ -4,10 +4,11 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState, useEffect } from 'react'
 import { createGoalSchema, type CreateGoalFormData } from '@/lib/validators'
 import { goalsApi } from '@/api/goals.api'
+import { bankAccountsApi } from '@/api/bank-accounts.api'
 import { familiesApi } from '@/api/families.api'
 import { useAuthStore } from '@/stores/auth.store'
 import { Modal } from '@/components/ui/modal'
-import { Input, CurrencyInput } from '@/components/ui/input'
+import { Input, CurrencyInput, Select } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Avatar } from '@/components/ui/avatar'
 import { useToast } from '@/components/ui/toast'
@@ -28,6 +29,12 @@ export function CreateGoalModal({ open, onClose, onSuccess }: Props) {
   const [totalCalcMode, setTotalCalcMode] = useState<'by_months' | 'by_installment'>('by_months')
   const [selectedMembers, setSelectedMembers] = useState<string[]>([])
   const [percentages, setPercentages] = useState<Record<string, number>>({})
+
+  const { data: accounts = [] } = useQuery({
+    queryKey: ['bank-accounts', family?.id],
+    queryFn: () => bankAccountsApi.listByFamily(family!.id),
+    enabled: !!family?.id && open,
+  })
 
   const { data: members = [] } = useQuery({
     queryKey: ['family-members-with-profiles', family?.id],
@@ -155,6 +162,18 @@ export function CreateGoalModal({ open, onClose, onSuccess }: Props) {
             {...register('first_installment_date')}
           />
         </div>
+
+        <Select
+          label="Conta vinculada"
+          error={errors.bank_account_id?.message}
+          required
+          {...register('bank_account_id')}
+        >
+          <option value="">Selecione a conta...</option>
+          {accounts.filter(a => a.status === 'active').map(a => (
+            <option key={a.id} value={a.id}>{a.nickname}{a.bank_name ? ` — ${a.bank_name}` : ''}</option>
+          ))}
+        </Select>
 
         <Input
           label="Descrição (opcional)"
