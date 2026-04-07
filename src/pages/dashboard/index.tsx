@@ -53,7 +53,7 @@ export default function DashboardPage() {
 
   const isLoading = loadingAccounts || loadingGoals || loadingInstallments
 
-  const totalBalance = accounts.reduce((s, a) => s + a.current_balance, 0)
+  const totalBalance = accounts.reduce((s, a) => s + (a.current_balance ?? 0), 0)
   const activeGoals = goals.filter(g => g.status === 'active')
   const totalTarget = activeGoals.reduce((s, g) => s + g.target_amount, 0)
   const totalSaved = activeGoals.reduce((s, g) => s + g.current_balance, 0)
