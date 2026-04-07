@@ -1,17 +1,19 @@
 import { useState } from 'react'
-import { Settings, Users, Copy, Check, RefreshCw, Clock, Sun, Moon, Bell, Shield, LogOut } from 'lucide-react'
+import { Settings, Users, Copy, Check, RefreshCw, Clock, Sun, Moon, Bell, Shield, LogOut, Crown, UserCircle2 } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
+import { useQuery } from '@tanstack/react-query'
 import { familiesApi } from '@/api/families.api'
 import { authApi } from '@/api/auth.api'
 import { useAuthStore } from '@/stores/auth.store'
 import { useUIStore } from '@/stores/ui.store'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { Avatar } from '@/components/ui/avatar'
 import { useToast } from '@/components/ui/toast'
 import { formatDate } from '@/lib/utils'
 
 export default function SettingsPage() {
-  const { family, familyRole, setFamily } = useAuthStore()
+  const { family, familyRole, profile: currentProfile, setFamily } = useAuthStore()
   const { theme, setTheme } = useUIStore()
   const { toast } = useToast()
   const navigate = useNavigate()
@@ -21,6 +23,12 @@ export default function SettingsPage() {
   const [expiresInHours, setExpiresInHours] = useState(24)
 
   const isAdmin = familyRole === 'admin'
+
+  const { data: members = [] } = useQuery({
+    queryKey: ['family-members', family?.id],
+    queryFn: () => familiesApi.getMembersWithProfiles(family!.id),
+    enabled: !!family,
+  })
 
   const isCodeExpired = family?.invite_code_expires_at
     ? new Date(family.invite_code_expires_at) < new Date()
@@ -117,8 +125,49 @@ export default function SettingsPage() {
         </div>
       </Card>
 
-      {/* Código de Convite — apenas admin */}
-      {family && isAdmin && (
+      {/* Membros da Família */}
+      <Card padding="lg">
+        <div className="flex items-center gap-2 mb-4">
+          <Users className="size-4 text-gray-400" />
+          <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Membros da Família</h3>
+          <span className="ml-auto text-xs text-gray-400">{members.filter(m => m.status === 'active').length} ativos</span>
+        </div>
+
+        {members.length === 0 ? (
+          <p className="text-xs text-gray-400 text-center py-4">Nenhum membro encontrado</p>
+        ) : (
+          <div className="space-y-3">
+            {members
+              .filter(m => m.status === 'active')
+              .map(member => {
+                const name = member.profile?.full_name ?? 'Usuário'
+                const isYou = member.user_id === currentProfile?.id
+                return (
+                  <div key={member.id} className="flex items-center gap-3">
+                    <Avatar name={name} src={member.profile?.avatar_url} size="sm" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
+                        {name}
+                        {isYou && <span className="ml-1.5 text-xs text-primary-500 font-normal">(você)</span>}
+                      </p>
+                      <p className="text-xs text-gray-400 truncate">{member.profile?.phone ?? ''}</p>
+                    </div>
+                    <span className={`flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium shrink-0 ${
+                      member.role === 'admin'
+                        ? 'bg-primary-100 text-primary-700 dark:bg-primary-900/30 dark:text-primary-400'
+                        : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'
+                    }`}>
+                      {member.role === 'admin' ? <Crown className="size-3" /> : <UserCircle2 className="size-3" />}
+                      {member.role === 'admin' ? 'Admin' : 'Membro'}
+                    </span>
+                  </div>
+                )
+              })}
+          </div>
+        )}
+      </Card>
+
+      {/* Código de Convite — apenas admin */}      {family && isAdmin && (
         <Card padding="lg">
           <div className="flex items-center gap-2 mb-1">
             <Shield className="size-4 text-primary-500" />

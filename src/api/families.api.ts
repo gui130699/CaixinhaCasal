@@ -55,6 +55,20 @@ export const familiesApi = {
     return snap.docs.map(d => ({ id: d.id, ...d.data() })) as FamilyMember[]
   },
 
+  async getMembersWithProfiles(familyId: string): Promise<FamilyMember[]> {
+    const snap = await getDocs(collection(db, 'families', familyId, 'members'))
+    const members = snap.docs.map(d => ({ id: d.id, ...d.data() })) as FamilyMember[]
+    const profiles = await Promise.all(
+      members.map(m => getDoc(doc(db, 'profiles', m.user_id)))
+    )
+    return members.map((m, i) => ({
+      ...m,
+      profile: profiles[i].exists()
+        ? { id: profiles[i].id, ...profiles[i].data() } as any
+        : undefined,
+    }))
+  },
+
   async addMember(familyId: string, userId: string, role: 'admin' | 'member'): Promise<void> {
     await setDoc(doc(db, 'families', familyId, 'members', userId), {
       user_id: userId,
