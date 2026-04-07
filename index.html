@@ -17,6 +17,19 @@
   </head>
   <body>
     <div id="root"></div>
+    <script>
+      // Capture beforeinstallprompt early, before React mounts
+      window.__pwaInstallPrompt = null;
+      window.addEventListener('beforeinstallprompt', function(e) {
+        e.preventDefault();
+        window.__pwaInstallPrompt = e;
+        window.dispatchEvent(new Event('pwa-install-available'));
+      });
+      window.addEventListener('appinstalled', function() {
+        window.__pwaInstallPrompt = null;
+        window.dispatchEvent(new Event('pwa-installed'));
+      });
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
