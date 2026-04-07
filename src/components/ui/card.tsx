@@ -60,7 +60,7 @@ export function StatCard({ title, value, subtitle, icon, trend, color = 'default
     <Card className={className}>
       <div className="flex items-start justify-between gap-3">
         <div className="flex-1 min-w-0">
-          <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide truncate">
+          <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide leading-tight">
             {title}
           </p>
           <p className="mt-1.5 text-2xl font-bold text-gray-900 dark:text-gray-100 truncate">

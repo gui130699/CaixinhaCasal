@@ -24,6 +24,17 @@ function Root() {
   const hideSplash = useCallback(() => setShowSplash(false), [])
 
   const { updateServiceWorker } = useRegisterSW({
+    onRegistered(registration) {
+      // Verifica atualizações sempre que o app ganha foco (volta para tela)
+      const checkUpdate = () => {
+        if (document.visibilityState === 'visible') {
+          registration?.update()
+        }
+      }
+      document.addEventListener('visibilitychange', checkUpdate)
+      // Também verifica imediatamente ao montar
+      registration?.update()
+    },
     onNeedRefresh() {
       // Nova versão disponível — mostra splash de atualização e aplica
       setUpdating(true)
