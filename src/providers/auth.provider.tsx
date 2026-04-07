@@ -34,8 +34,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   async function loadUserData(userId: string) {
     setLoading(true)
     try {
-      const [profile, isAdmin, familyData] = await Promise.all([
-        profilesApi.getById(userId),
+      // Tenta até 3x com 1s de delay — aguarda o perfil ser criado (race condition no cadastro)
+      let profile = null
+      for (let i = 0; i < 3; i++) {
+        profile = await profilesApi.getById(userId)
+        if (profile) break
+        await new Promise(r => setTimeout(r, 1000))
+      }
+      const [isAdmin, familyData] = await Promise.all([
         profilesApi.isMasterAdmin(userId),
         familiesApi.getUserFamily(userId),
       ])

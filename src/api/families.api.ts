@@ -63,7 +63,8 @@ export const familiesApi = {
       status: 'active',
       joined_at: new Date().toISOString(),
     })
-    await updateDoc(doc(db, 'profiles', userId), { family_id: familyId })
+    // setDoc com merge para não falhar se o perfil ainda não existir
+    await setDoc(doc(db, 'profiles', userId), { family_id: familyId }, { merge: true })
   },
 
   async updateMemberRole(familyId: string, userId: string, role: 'admin' | 'member'): Promise<void> {
