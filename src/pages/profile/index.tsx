@@ -1,7 +1,7 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { User, Lock, Camera } from 'lucide-react'
+import { User, Lock, Camera, Loader2 } from 'lucide-react'
 import { profilesApi } from '@/api/profiles.api'
 import { authApi } from '@/api/auth.api'
 import { useAuthStore } from '@/stores/auth.store'
@@ -30,6 +30,8 @@ export default function ProfilePage() {
   const { toast } = useToast()
   const [loadingProfile, setLoadingProfile] = useState(false)
   const [loadingPassword, setLoadingPassword] = useState(false)
+  const [uploadingAvatar, setUploadingAvatar] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const profileForm = useForm<ProfileFormData>({
     resolver: zodResolver(profileSchema),
@@ -37,6 +39,30 @@ export default function ProfilePage() {
   })
 
   const passwordForm = useForm<PasswordFormData>({ resolver: zodResolver(passwordSchema) })
+
+  const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file || !profile) return
+    if (!file.type.startsWith('image/')) {
+      toast('Selecione uma imagem válida', 'error')
+      return
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast('Imagem deve ter menos de 5 MB', 'error')
+      return
+    }
+    setUploadingAvatar(true)
+    try {
+      const url = await profilesApi.uploadAvatar(profile.id, file)
+      setProfile({ ...profile, avatar_url: url })
+      toast('Foto atualizada!', 'success')
+    } catch (err: any) {
+      toast(err.message || 'Erro ao enviar foto', 'error')
+    } finally {
+      setUploadingAvatar(false)
+      e.target.value = ''
+    }
+  }
 
   const handleProfileSubmit = async (data: ProfileFormData) => {
     if (!profile) return
@@ -77,14 +103,29 @@ export default function ProfilePage() {
         <div className="flex items-center gap-4 mb-6">
           <div className="relative">
             <Avatar name={profile?.full_name ?? 'U'} size="xl" src={profile?.avatar_url} />
-            <button className="absolute -bottom-1 -right-1 size-7 bg-primary-600 text-white rounded-full flex items-center justify-center shadow-md hover:bg-primary-700 transition-colors">
-              <Camera className="size-3" />
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploadingAvatar}
+              className="absolute -bottom-1 -right-1 size-7 bg-primary-600 text-white rounded-full flex items-center justify-center shadow-md hover:bg-primary-700 transition-colors disabled:opacity-60"
+            >
+              {uploadingAvatar
+                ? <Loader2 className="size-3 animate-spin" />
+                : <Camera className="size-3" />}
             </button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={handleAvatarChange}
+            />
           </div>
           <div>
             <p className="text-lg font-bold text-gray-900 dark:text-gray-100">{profile?.full_name}</p>
             <p className="text-sm text-gray-500">{family?.name}</p>
             <p className="text-xs text-primary-600 font-medium capitalize mt-0.5">{familyRole === 'admin' ? 'Administrador' : 'Membro'}</p>
+            <p className="text-xs text-gray-400 mt-1">Clique na câmera para trocar a foto</p>
           </div>
         </div>
 
