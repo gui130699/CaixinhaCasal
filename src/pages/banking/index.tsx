@@ -83,7 +83,7 @@ export default function BankingPage() {
       </div>
 
       {accounts.length === 0 ? (
-        <EmptyState icon={<Building2 className="size-8" />} title="Nenhuma conta cadastrada" description="Adicione uma conta bancária para começar" action={<Button leftIcon={<Plus className="size-4" />} onClick={() => setShowCreate(true)}>Nova Conta</Button>} />
+        <EmptyState icon={<Building2 className="size-8" />} title="Nenhuma conta cadastrada" description="Adicione uma conta bancária para começar" />
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {accounts.map(account => (
