@@ -87,35 +87,39 @@ export default function BankingPage() {
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {accounts.map(account => (
-            <div key={account.id} className={`card ${account.status !== 'active' ? 'opacity-60' : ''} relative group`}>
-              <div className="flex items-start justify-between mb-3">
-                <div className="flex items-center gap-2">
-                  <div className="size-9 rounded-xl bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
+            <div key={account.id} className={`card p-4 ${account.status !== 'active' ? 'opacity-60' : ''} relative group`}>
+              {/* Cabeçalho: ícone + nome + badges */}
+              <div className="flex items-center justify-between gap-2 mb-3">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <div className="size-8 rounded-xl bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center shrink-0">
                     <Building2 className="size-4 text-blue-600 dark:text-blue-400" />
                   </div>
-                  <div>
-                    <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">{account.nickname}</p>
-                    <p className="text-xs text-gray-400">{account.bank_name}</p>
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate">{account.nickname}</p>
+                    <p className="text-xs text-gray-400 truncate">{account.bank_name}</p>
                   </div>
                 </div>
-                <div className="flex items-center gap-1">
+                <div className="flex items-center gap-1 shrink-0">
                   {account.is_primary && <span className="badge bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400">Principal</span>}
                   {account.status !== 'active' && <span className="badge bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400">Inativa</span>}
                 </div>
               </div>
 
-              <div className="mb-4">
-                <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{formatCurrency(account.current_balance)}</p>
+              {/* Saldo + número da conta */}
+              <div className="flex items-end justify-between mb-3 px-0.5">
+                <div>
+                  <p className="text-[11px] text-gray-400 mb-0.5 uppercase tracking-wide">Saldo</p>
+                  <p className="text-xl font-bold text-gray-900 dark:text-gray-100">{formatCurrency(account.current_balance ?? 0)}</p>
+                </div>
                 {account.account_number && (
-                  <p className="text-xs text-gray-400 mt-0.5">Conta: {account.account_number}</p>
+                  <p className="text-xs text-gray-400">Ag. {account.agency ?? '—'} · Cc. {account.account_number}</p>
                 )}
               </div>
 
-              <div className="flex items-center gap-2 pt-3 border-t border-gray-100 dark:border-gray-800">
-                <Link to={`/banking/${account.id}`} className="flex-1">
-                  <Button variant="ghost" size="sm" className="w-full justify-between">
-                    Ver extrato <ArrowRight className="size-3" />
-                  </Button>
+              {/* Rodapé */}
+              <div className="flex items-center justify-between pt-2.5 border-t border-gray-100 dark:border-gray-800">
+                <Link to={`/banking/${account.id}`} className="flex items-center gap-1 text-xs font-medium text-primary-600 hover:underline">
+                  Ver extrato <ArrowRight className="size-3" />
                 </Link>
                 <div className="relative">
                   <details className="group/menu">
