@@ -1,0 +1,92 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Funções auxiliares
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return request.auth.uid == userId;
+    }
+
+    function isFamilyMember(familyId) {
+      return isAuthenticated() &&
+        exists(/databases/$(database)/documents/families/$(familyId)/members/$(request.auth.uid));
+    }
+
+    function isFamilyAdmin(familyId) {
+      return isAuthenticated() &&
+        get(/databases/$(database)/documents/families/$(familyId)/members/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    // Perfis: usuário lê/edita o próprio, admins leem todos
+    match /profiles/{userId} {
+      allow read: if isAuthenticated();
+      allow create: if isOwner(userId);
+      allow update: if isOwner(userId);
+    }
+
+    // Roles de admin
+    match /adminRoles/{userId} {
+      allow read: if isAuthenticated();
+      allow write: if false; // Só via console do Firebase
+    }
+
+    // Famílias
+    match /families/{familyId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update: if isFamilyAdmin(familyId);
+      allow delete: if isFamilyAdmin(familyId);
+
+      // Membros da família
+      match /members/{userId} {
+        allow read: if isAuthenticated();
+        allow create: if isAuthenticated();
+        allow update: if isFamilyAdmin(familyId) || isOwner(userId);
+        allow delete: if isFamilyAdmin(familyId);
+      }
+
+      // Metas
+      match /goals/{goalId} {
+        allow read, write: if isFamilyMember(familyId);
+
+        match /members/{memberId} {
+          allow read, write: if isFamilyMember(familyId);
+        }
+      }
+
+      // Parcelas
+      match /installments/{installmentId} {
+        allow read, write: if isFamilyMember(familyId);
+      }
+    }
+
+    // Contas bancárias
+    match /bank_accounts/{accountId} {
+      allow read, write: if isAuthenticated() &&
+        isFamilyMember(resource.data.family_id);
+      allow create: if isAuthenticated();
+    }
+
+    // Transações
+    match /transactions/{txId} {
+      allow read, write: if isAuthenticated() &&
+        isFamilyMember(resource.data.family_id);
+      allow create: if isAuthenticated();
+    }
+
+    // Juros
+    match /interest_rates/{rateId} {
+      allow read, write: if isAuthenticated();
+    }
+
+    // Logs de auditoria
+    match /auditLogs/{logId} {
+      allow read: if isAuthenticated();
+      allow write: if false;
+    }
+  }
+}

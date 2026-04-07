@@ -1,7 +1,7 @@
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import { Eye, EyeOff, PiggyBank, UserPlus } from 'lucide-react'
 import { z } from 'zod'
 import { authApi } from '@/api/auth.api'
@@ -25,7 +25,6 @@ export default function RegisterPage() {
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirm, setShowConfirm] = useState(false)
   const [error, setError] = useState('')
-  const navigate = useNavigate()
 
   const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<RegisterForm>({
     resolver: zodResolver(registerSchema),
@@ -39,9 +38,8 @@ export default function RegisterPage() {
         id: user.uid,
         full_name: data.full_name,
         email: data.email,
-        status: 'active',
       })
-      navigate('/family-setup')
+      // AuthProvider detecta o login e redireciona para /family-setup automaticamente
     } catch (err: unknown) {
       const e = err as { code?: string; message?: string }
       if (e.code === 'auth/email-already-in-use') {

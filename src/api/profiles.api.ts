@@ -21,7 +21,7 @@ export const profilesApi = {
   async create(id: string, data: Partial<Profile>): Promise<void> {
     await setDoc(doc(db, 'profiles', id), {
       ...data,
-      is_active: true,
+      status: 'active',
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     })

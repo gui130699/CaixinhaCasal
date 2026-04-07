@@ -22,8 +22,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(user)
       if (user) {
         await loadUserData(user.uid)
-        const isPublic = ['/login', '/register', '/forgot-password', '/reset-password'].includes(location.pathname)
-        if (isPublic) navigate('/')
       } else {
         reset()
         const isPublic = ['/login', '/register', '/family-setup', '/forgot-password', '/reset-password'].includes(location.pathname)
@@ -46,9 +44,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (familyData) {
         setFamily(familyData.family)
         setFamilyRole(familyData.role as 'admin' | 'member')
+        // Se estava numa página pública, redireciona para o app
+        const isPublic = ['/login', '/register', '/forgot-password', '/reset-password'].includes(location.pathname)
+        if (isPublic) navigate('/')
       } else {
-        // Usuário sem família — redireciona para configuração
-        navigate('/family-setup')
+        // Sem família — redireciona para configuração (exceto se já está lá)
+        if (location.pathname !== '/family-setup') navigate('/family-setup')
       }
       if (profile) await profilesApi.updateLastLogin(userId)
     } catch (err) {
