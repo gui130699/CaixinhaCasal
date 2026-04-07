@@ -2,6 +2,7 @@ import type { ReactNode } from 'react'
 import { Outlet } from 'react-router-dom'
 import { Sidebar, MobileSidebar, BottomNav } from './sidebar'
 import { Header } from './header'
+import { InstallPrompt } from '@/components/ui/install-prompt'
 
 export function AppLayout({ title }: { title?: string }) {
   return (
@@ -18,6 +19,7 @@ export function AppLayout({ title }: { title?: string }) {
       </div>
 
       <BottomNav />
+      <InstallPrompt />
     </div>
   )
 }
