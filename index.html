@@ -14,10 +14,23 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
     <title>Caixinha Casal</title>
-    <script type="module" crossorigin src="/CaixinhaCasal/assets/index-K21-aNOz.js"></script>
+    <script type="module" crossorigin src="/CaixinhaCasal/assets/index-C4tdfWd9.js"></script>
     <link rel="stylesheet" crossorigin href="/CaixinhaCasal/assets/index-Bv8-ST2z.css">
   <link rel="manifest" href="/CaixinhaCasal/manifest.webmanifest"><script id="vite-plugin-pwa:register-sw" src="/CaixinhaCasal/registerSW.js"></script></head>
   <body>
-    <div id="root"></div>
+    <div id="root"></div>
+    <script>
+      // Capture beforeinstallprompt early, before React mounts
+      window.__pwaInstallPrompt = null;
+      window.addEventListener('beforeinstallprompt', function(e) {
+        e.preventDefault();
+        window.__pwaInstallPrompt = e;
+        window.dispatchEvent(new Event('pwa-install-available'));
+      });
+      window.addEventListener('appinstalled', function() {
+        window.__pwaInstallPrompt = null;
+        window.dispatchEvent(new Event('pwa-installed'));
+      });
+    </script>
   </body>
 </html>
