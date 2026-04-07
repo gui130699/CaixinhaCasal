@@ -58,20 +58,40 @@ service cloud.firestore {
         }
       }
 
+      // Contas bancárias (subcoleção)
+      match /bankAccounts/{accountId} {
+        allow read, write: if isFamilyMember(familyId);
+      }
+
+      // Transações (subcoleção)
+      match /transactions/{txId} {
+        allow read, write: if isFamilyMember(familyId);
+      }
+
+      // Juros (subcoleção)
+      match /interestRates/{rateId} {
+        allow read, write: if isFamilyMember(familyId);
+      }
+
+      // Transferências (subcoleção)
+      match /transfers/{transferId} {
+        allow read, write: if isFamilyMember(familyId);
+      }
+
       // Parcelas
       match /installments/{installmentId} {
         allow read, write: if isFamilyMember(familyId);
       }
     }
 
-    // Contas bancárias
+    // Regras legadas na raiz (mantidas por compatibilidade)
     match /bank_accounts/{accountId} {
       allow read, write: if isAuthenticated() &&
         isFamilyMember(resource.data.family_id);
       allow create: if isAuthenticated();
     }
 
-    // Transações
+    // Transações raiz (legado)
     match /transactions/{txId} {
       allow read, write: if isAuthenticated() &&
         isFamilyMember(resource.data.family_id);
