@@ -139,7 +139,7 @@ export function CreateGoalModal({ open, onClose, onSuccess }: Props) {
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
 
         {/* Nome + Data da primeira parcela */}
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-2 gap-3 items-end">
           <Input
             label="Nome da meta"
             placeholder="Ex: Viagem, Reforma..."
@@ -148,7 +148,7 @@ export function CreateGoalModal({ open, onClose, onSuccess }: Props) {
             {...register('name')}
           />
           <Input
-            label="Data da primeira parcela"
+            label="Vencimento mensal"
             type="date"
             error={errors.first_installment_date?.message}
             required
