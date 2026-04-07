@@ -94,11 +94,6 @@ export default function GoalsPage() {
           icon={<Target className="size-8" />}
           title="Nenhuma meta encontrada"
           description="Crie sua primeira meta financeira para começar a economizar."
-          action={canManage ? (
-            <Button leftIcon={<Plus className="size-4" />} onClick={() => setShowCreate(true)}>
-              Criar Meta
-            </Button>
-          ) : undefined}
         />
       ) : (
         <div className="grid sm:grid-cols-2 xl:grid-cols-3 gap-4">
