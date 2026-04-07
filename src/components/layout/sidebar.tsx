@@ -30,11 +30,12 @@ const adminItems = [
   { to: '/admin/audit', icon: FileText, label: 'Auditoria' },
 ]
 
-function NavItem({ to, icon: Icon, label, end }: { to: string; icon: React.ElementType; label: string; end?: boolean }) {
+function NavItem({ to, icon: Icon, label, end, onClick }: { to: string; icon: React.ElementType; label: string; end?: boolean; onClick?: () => void }) {
   return (
     <NavLink
       to={to}
       end={end}
+      onClick={onClick}
       className={({ isActive }) => cn(isActive ? 'nav-item-active' : 'nav-item')}
     >
       <Icon className="size-4.5 shrink-0" />
@@ -73,7 +74,7 @@ function SidebarContent({ onClose }: { onClose?: () => void }) {
       {/* Nav */}
       <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-1 scrollbar-thin">
         {navItems.map(item => (
-          <NavItem key={item.to} {...item} />
+          <NavItem key={item.to} {...item} onClick={onClose} />
         ))}
 
         {isMasterAdmin && (
@@ -82,7 +83,7 @@ function SidebarContent({ onClose }: { onClose?: () => void }) {
               <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Administração</p>
             </div>
             {adminItems.map(item => (
-              <NavItem key={item.to} {...item} />
+              <NavItem key={item.to} {...item} onClick={onClose} />
             ))}
           </>
         )}
@@ -96,7 +97,7 @@ function SidebarContent({ onClose }: { onClose?: () => void }) {
             <p className="text-xs font-semibold text-gray-900 dark:text-gray-100 truncate">
               {profile?.full_name}
             </p>
-            <NavLink to="/profile" className="text-[10px] text-primary-600 hover:underline">
+            <NavLink to="/profile" onClick={onClose} className="text-[10px] text-primary-600 hover:underline">
               Meu perfil
             </NavLink>
           </div>
