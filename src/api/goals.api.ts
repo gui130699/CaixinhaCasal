@@ -16,7 +16,7 @@ import type { Goal, GoalMember, Installment } from '@/types'
 import type { CreateGoalFormData } from '@/lib/validators'
 import { calculateInstallment, calculateMonths } from '@/lib/utils'
 
-function generateInstallments(goalId: string, familyId: string, firstInstallmentDate: string, months: number, memberSchedule: { userId: string; amount: number }[]) {
+function generateInstallments(goalId: string, familyId: string, firstInstallmentDate: string, months: number, memberSchedule: { userId: string; amount: number }[], bankAccountId?: string | null) {
   const installs: Omit<Installment, 'id'>[] = []
   const base = new Date(firstInstallmentDate + 'T00:00:00')
   const dueDay = base.getDate()
@@ -36,6 +36,7 @@ function generateInstallments(goalId: string, familyId: string, firstInstallment
         expected_amount: ms.amount,
         paid_amount: 0,
         status: 'pending',
+        bank_account_id: bankAccountId ?? null,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       } as any)
@@ -244,7 +245,7 @@ export const goalsApi = {
     // Gerar novas parcelas a partir de hoje
     const firstInstallDate = form.first_installment_date
     const memberSchedule = participants.map(m => ({ userId: m.user_id, amount: m.expected_monthly_amount }))
-    const installs = generateInstallments(goalId, familyId, firstInstallDate, remainingMonths, memberSchedule)
+    const installs = generateInstallments(goalId, familyId, firstInstallDate, remainingMonths, memberSchedule, form.bank_account_id ?? null)
     await Promise.all(installs.map(inst => addDoc(collection(db, 'families', familyId, 'installments'), inst)))
 
     // Calcular novo target_date

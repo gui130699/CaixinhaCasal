@@ -198,17 +198,20 @@ export function EditGoalModal({ open, goal, onClose, onSuccess }: Props) {
           </div>
         </div>
 
-        <Select
-          label="Conta vinculada"
-          error={errors.bank_account_id?.message}
-          required
-          {...register('bank_account_id')}
-        >
-          <option value="">Selecione a conta...</option>
-          {accounts.filter(a => a.status === 'active').map(a => (
-            <option key={a.id} value={a.id}>{a.nickname}{a.bank_name ? ` — ${a.bank_name}` : ''}</option>
-          ))}
-        </Select>
+        <div>
+          <Select
+            label="Conta vinculada"
+            error={errors.bank_account_id?.message}
+            required
+            {...register('bank_account_id')}
+          >
+            <option value="">Selecione a conta...</option>
+            {accounts.filter(a => a.status === 'active').map(a => (
+              <option key={a.id} value={a.id}>{a.nickname}{a.bank_name ? ` — ${a.bank_name}` : ''}</option>
+            ))}
+          </Select>
+          <p className="mt-1 text-[11px] text-gray-400">Parcelas em aberto passarão para esta conta. Pagamentos já realizados permanecem na conta anterior.</p>
+        </div>
 
         <Input
           label="Descrição (opcional)"
