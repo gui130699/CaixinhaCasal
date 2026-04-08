@@ -7,7 +7,6 @@ import {
   updateDoc,
   deleteDoc,
   setDoc,
-  writeBatch,
   query,
   where,
   orderBy,
@@ -87,12 +86,12 @@ export const familiesApi = {
   },
 
   async removeMember(familyId: string, userId: string): Promise<void> {
-    const batch = writeBatch(db)
-    // Marca membro como inativo
-    batch.update(doc(db, 'families', familyId, 'members', userId), { status: 'inactive' })
-    // Remove family_id do perfil para que o usuário vá para family-setup no próximo login
-    batch.update(doc(db, 'profiles', userId), { family_id: null })
-    await batch.commit()
+    // Apenas marca o membro como inativo.
+    // Não alteramos o perfil alheio pois as Firestore rules só permitem
+    // que o próprio usuário edite seu perfil. O getUserFamily já verifica
+    // status === 'active', então o usuário removido será redirecionado
+    // para family-setup no próximo login.
+    await updateDoc(doc(db, 'families', familyId, 'members', userId), { status: 'inactive' })
   },
 
   async getUserFamily(userId: string): Promise<{ family: Family; role: string } | null> {
@@ -105,7 +104,8 @@ export const familiesApi = {
       getDoc(doc(db, 'families', familyId, 'members', userId)),
     ])
     if (!familySnap.exists()) return null
-    const role = memberSnap.exists() ? memberSnap.data().role : 'member'
+    if (!memberSnap.exists() || memberSnap.data().status !== 'active') return null
+    const role = memberSnap.data().role
     return { family: { id: familySnap.id, ...familySnap.data() } as Family, role }
   },
 
