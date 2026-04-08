@@ -130,7 +130,7 @@ export function CreateGoalModal({ open, onClose, onSuccess }: Props) {
         participant_ids: selectedMembers,
         percentages,
       })
-      queryClient.invalidateQueries({ queryKey: ['goals'] })
+      queryClient.invalidateQueries()
       success('Meta criada com sucesso!')
       handleClose()
       onSuccess()

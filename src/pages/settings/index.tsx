@@ -68,7 +68,7 @@ export default function SettingsPage() {
     setRemovingId(userId)
     try {
       await familiesApi.removeMember(family.id, userId)
-      queryClient.invalidateQueries({ queryKey: ['family-members', family.id] })
+      queryClient.invalidateQueries()
       toast('Membro removido da família.', 'success')
     } catch (err: any) {
       toast(err.message || 'Erro ao remover membro', 'error')

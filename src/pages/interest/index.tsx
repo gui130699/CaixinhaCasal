@@ -39,8 +39,7 @@ function AddInterestModal({ open, onClose }: { open: boolean; onClose: () => voi
     setLoading(true)
     try {
       await interestRatesApi.create({ ...data, family_id: family.id })
-      queryClient.invalidateQueries({ queryKey: ['interest-rates'] })
-      queryClient.invalidateQueries({ queryKey: ['bank-accounts'] })
+      queryClient.invalidateQueries()
       toast('Rendimento registrado!', 'success')
       handleClose()
     } catch (err: any) {

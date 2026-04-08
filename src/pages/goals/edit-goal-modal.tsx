@@ -161,8 +161,7 @@ export function EditGoalModal({ open, goal, onClose, onSuccess }: Props) {
         participant_ids: selectedMembers,
         percentages,
       })
-      queryClient.invalidateQueries({ queryKey: ['goals'] })
-      queryClient.invalidateQueries({ queryKey: ['installments'] })
+      queryClient.invalidateQueries()
       success('Meta atualizada com sucesso!')
       handleClose()
       onSuccess()

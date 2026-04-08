@@ -47,7 +47,7 @@ export default function GoalsPage() {
     setDeletingId(goalId)
     try {
       await goalsApi.softDelete(goalId, family!.id)
-      queryClient.invalidateQueries({ queryKey: ['goals', family?.id] })
+      queryClient.invalidateQueries()
       toast('Meta excluída. Saldo bancário mantido.', 'success')
     } catch (err: any) {
       toast(err.message || 'Erro ao excluir meta', 'error')
@@ -219,7 +219,7 @@ export default function GoalsPage() {
           open={showCreate}
           onClose={() => setShowCreate(false)}
           onSuccess={() => {
-            queryClient.invalidateQueries({ queryKey: ['goals', family?.id] })
+          queryClient.invalidateQueries()
             setShowCreate(false)
           }}
         />
@@ -231,7 +231,7 @@ export default function GoalsPage() {
           goal={editGoal}
           onClose={() => setEditGoal(null)}
           onSuccess={() => {
-            queryClient.invalidateQueries({ queryKey: ['goals', family?.id] })
+          queryClient.invalidateQueries()
             setEditGoal(null)
           }}
         />

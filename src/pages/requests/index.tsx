@@ -41,8 +41,7 @@ export default function RequestsPage() {
     setProcessingId(requestId)
     try {
       await requestsApi.approve(requestId, family!.id, user!.uid)
-      queryClient.invalidateQueries({ queryKey: ['requests'] })
-      queryClient.invalidateQueries({ queryKey: ['installments'] })
+      queryClient.invalidateQueries()
       toast('Solicitação aprovada. Parcela revertida para pendente.', 'success')
     } catch (err: any) {
       toast(err.message || 'Erro ao aprovar solicitação', 'error')
@@ -55,7 +54,7 @@ export default function RequestsPage() {
     setProcessingId(requestId)
     try {
       await requestsApi.reject(requestId, family!.id, user!.uid)
-      queryClient.invalidateQueries({ queryKey: ['requests'] })
+      queryClient.invalidateQueries()
       toast('Solicitação rejeitada.', 'success')
     } catch (err: any) {
       toast(err.message || 'Erro ao rejeitar solicitação', 'error')

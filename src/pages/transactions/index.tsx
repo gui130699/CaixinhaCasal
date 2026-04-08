@@ -72,8 +72,7 @@ function CreateTransactionModal({ open, onClose }: { open: boolean; onClose: () 
           created_by: profile.id,
         })
       }
-      queryClient.invalidateQueries({ queryKey: ['transactions'] })
-      queryClient.invalidateQueries({ queryKey: ['bank-accounts'] })
+      queryClient.invalidateQueries()
       toast('Transação registrada!', 'success')
       handleClose()
     } catch (err: any) {

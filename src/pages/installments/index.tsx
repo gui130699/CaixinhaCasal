@@ -75,7 +75,7 @@ export default function InstallmentsPage() {
         paid_amount: amount,
         payment_date: new Date().toISOString().slice(0, 10),
       })
-      queryClient.invalidateQueries({ queryKey: ['installments'] })
+      queryClient.invalidateQueries()
       toast('Parcela registrada como paga!', 'success')
       setConfirmingId(null)
     } catch (err: any) {
@@ -103,7 +103,7 @@ export default function InstallmentsPage() {
         })
         toast('Solicitação de estorno enviada ao administrador.', 'success')
       }
-      queryClient.invalidateQueries({ queryKey: ['installments'] })
+      queryClient.invalidateQueries()
       setUndoConfirmId(null)
     } catch (err: any) {
       toast(err.message || 'Erro', 'error')

@@ -33,7 +33,7 @@ export default function BankingPage() {
     if (!deletingId) return
     try {
       await bankAccountsApi.delete(deletingId, family!.id)
-      queryClient.invalidateQueries({ queryKey: ['bank-accounts'] })
+      queryClient.invalidateQueries()
       toast('Conta removida', 'success')
     } catch (err: any) {
       toast(err.message || 'Erro ao remover conta', 'error')
@@ -46,7 +46,7 @@ export default function BankingPage() {
     setSettingPrimary(id)
     try {
       await bankAccountsApi.setPrimary(id, family!.id)
-      queryClient.invalidateQueries({ queryKey: ['bank-accounts'] })
+      queryClient.invalidateQueries()
       toast('Conta principal atualizada', 'success')
     } catch {
       toast('Erro ao atualizar conta', 'error')
@@ -58,7 +58,7 @@ export default function BankingPage() {
   const handleToggle = async (id: string, active: boolean) => {
     try {
       await bankAccountsApi.toggleStatus(id, active, family!.id)
-      queryClient.invalidateQueries({ queryKey: ['bank-accounts'] })
+      queryClient.invalidateQueries()
     } catch {
       toast('Erro ao atualizar status', 'error')
     }

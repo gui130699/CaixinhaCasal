@@ -56,7 +56,7 @@ export default function CreateAccountModal({ open, onClose }: Props) {
     setLoading(true)
     try {
       await bankAccountsApi.create({ ...data, family_id: family.id })
-      queryClient.invalidateQueries({ queryKey: ['bank-accounts'] })
+      queryClient.invalidateQueries()
       toast('Conta criada com sucesso!', 'success')
       handleClose()
     } catch (err: any) {
