@@ -190,7 +190,7 @@ export default function GoalsPage() {
                     </div>
                     <div>
                       <p className="text-gray-400 mb-0.5">Objetivo</p>
-                      <p className="font-semibold text-gray-900 dark:text-gray-100">{formatCurrency(goal.target_amount)}</p>
+                      <p className="font-semibold text-gray-900 dark:text-gray-100">{formatCurrency(effectiveTarget)}</p>
                     </div>
                     <div>
                       <p className="text-gray-400 mb-0.5">Parcela</p>
