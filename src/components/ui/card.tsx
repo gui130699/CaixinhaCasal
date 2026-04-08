@@ -57,32 +57,30 @@ export function StatCard({ title, value, subtitle, icon, trend, color = 'default
   }
 
   return (
-    <Card className={className}>
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex-1 min-w-0">
-          <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide leading-tight">
-            {title}
-          </p>
-          <p className="mt-1.5 text-lg font-bold text-gray-900 dark:text-gray-100 leading-tight break-words">
-            {value}
-          </p>
-          {subtitle && (
-            <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400 line-clamp-2 leading-tight">{subtitle}</p>
-          )}
-          {trend && (
-            <p className={cn(
-              'mt-1 text-xs font-medium',
-              trend.value >= 0 ? 'text-green-600' : 'text-red-600'
-            )}>
-              {trend.value >= 0 ? '↑' : '↓'} {Math.abs(trend.value).toFixed(1)}%
-              {trend.label && <span className="text-gray-400 ml-1">{trend.label}</span>}
-            </p>
-          )}
+    <Card className={cn('relative', className)}>
+      {icon && (
+        <div className={cn('absolute top-4 right-4 p-2 rounded-xl', colorMap[color])}>
+          {icon}
         </div>
-        {icon && (
-          <div className={cn('p-2.5 rounded-xl shrink-0', colorMap[color])}>
-            {icon}
-          </div>
+      )}
+      <div className={cn('min-w-0', icon ? 'pr-12' : '')}>
+        <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide leading-tight">
+          {title}
+        </p>
+        <p className="mt-1.5 text-base font-bold text-gray-900 dark:text-gray-100 leading-tight">
+          {value}
+        </p>
+        {subtitle && (
+          <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400 leading-tight line-clamp-2">{subtitle}</p>
+        )}
+        {trend && (
+          <p className={cn(
+            'mt-1 text-xs font-medium',
+            trend.value >= 0 ? 'text-green-600' : 'text-red-600'
+          )}>
+            {trend.value >= 0 ? '↑' : '↓'} {Math.abs(trend.value).toFixed(1)}%
+            {trend.label && <span className="text-gray-400 ml-1">{trend.label}</span>}
+          </p>
         )}
       </div>
     </Card>
