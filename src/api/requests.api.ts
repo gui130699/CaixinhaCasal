@@ -99,6 +99,7 @@ export const requestsApi = {
     if (req.goal_id && paidAmount > 0) {
       batch.update(doc(db, 'families', familyId, 'goals', req.goal_id), {
         current_balance: increment(-paidAmount),
+        remaining_amount: increment(paidAmount),
         updated_at: now,
       })
     }

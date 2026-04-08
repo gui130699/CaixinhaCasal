@@ -119,7 +119,8 @@ export default function GoalsPage() {
       ) : (
         <div className="grid sm:grid-cols-2 xl:grid-cols-3 gap-4">
           {filtered.map(goal => {
-            const pct = calculateProgress(goal.current_balance, goal.target_amount)
+            const effectiveTarget = goal.target_amount > 0 ? goal.target_amount : (goal.remaining_amount + goal.current_balance)
+            const pct = calculateProgress(goal.current_balance, effectiveTarget)
             return (
               <Link key={goal.id} to={`/goals/${goal.id}`} className="block">
                 <Card hover className="h-full">

@@ -158,6 +158,7 @@ export const installmentsApi = {
     if (current.goal_id) {
       batch.update(doc(db, 'families', familyId, 'goals', current.goal_id), {
         current_balance: increment(form.paid_amount),
+        remaining_amount: increment(-form.paid_amount),
         updated_at: now,
       })
     }
@@ -254,6 +255,7 @@ export const installmentsApi = {
     if (current.goal_id && paidAmount > 0) {
       batch.update(doc(db, 'families', familyId, 'goals', current.goal_id), {
         current_balance: increment(-paidAmount),
+        remaining_amount: increment(paidAmount),
         updated_at: now,
       })
     }

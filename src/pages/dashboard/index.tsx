@@ -143,7 +143,8 @@ export default function DashboardPage() {
           ) : (
             <div className="space-y-3">
               {activeGoals.slice(0, 3).map(goal => {
-                const pct = calculateProgress(goal.current_balance, goal.target_amount)
+                const effectiveTarget = goal.target_amount > 0 ? goal.target_amount : (goal.remaining_amount + goal.current_balance)
+                const pct = calculateProgress(goal.current_balance, effectiveTarget)
                 return (
                   <Link key={goal.id} to={`/goals/${goal.id}`}>
                     <div className="p-3 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors -mx-1">

@@ -31,7 +31,12 @@ export default function GoalDetailPage() {
   if (isLoading) return <PageLoading />
   if (!goal) return <div className="text-center py-12">Meta não encontrada</div>
 
-  const pct = calculateProgress(goal.current_balance, goal.target_amount)
+  // Calcula a partir das parcelas para garantir valores corretos independente do Firestore
+  const totalExpected = installments.reduce((s, i) => s + i.expected_amount, 0)
+  const totalPaid = installments.reduce((s, i) => s + i.paid_amount, 0)
+  const totalRemaining = totalExpected - totalPaid
+  const effectiveTarget = totalExpected > 0 ? totalExpected : (goal.target_amount > 0 ? goal.target_amount : goal.remaining_amount)
+  const pct = effectiveTarget > 0 ? Math.min((totalPaid / effectiveTarget) * 100, 100) : 0
 
   // Dados do cronograma para o gráfico
   const chartData = installments.slice(0, 12).map(inst => ({
@@ -79,9 +84,9 @@ export default function GoalDetailPage() {
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-4">
               {[
-                { label: 'Objetivo', value: formatCurrency(goal.target_amount) },
-                { label: 'Acumulado', value: formatCurrency(goal.current_balance) },
-                { label: 'Restante', value: formatCurrency(goal.remaining_amount) },
+                { label: 'Objetivo', value: formatCurrency(effectiveTarget) },
+                { label: 'Acumulado', value: formatCurrency(totalPaid) },
+                { label: 'Restante', value: formatCurrency(Math.max(0, totalRemaining)) },
                 { label: 'Parcela', value: formatCurrency(goal.installment_amount) },
               ].map(({ label, value }) => (
                 <div key={label} className="p-3 bg-gray-50 dark:bg-gray-800 rounded-xl">
