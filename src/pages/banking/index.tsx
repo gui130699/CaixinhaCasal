@@ -76,7 +76,7 @@ export default function BankingPage() {
         <Button leftIcon={<Plus className="size-4" />} onClick={() => setShowCreate(true)}>Nova Conta</Button>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div className="grid grid-cols-3 gap-2">
         <StatCard title="Saldo Total" value={formatCurrency(totalBalance)} icon={<TrendingUp className="size-5" />} color="primary" />
         <StatCard title="Contas Ativas" value={String(accounts.filter(a => a.status === 'active').length)} icon={<Building2 className="size-5" />} color="success" />
         <StatCard title="Conta Principal" value={primaryAccount?.nickname ?? '—'} icon={<Star className="size-5" />} color="warning" />
@@ -85,34 +85,32 @@ export default function BankingPage() {
       {accounts.length === 0 ? (
         <EmptyState icon={<Building2 className="size-8" />} title="Nenhuma conta cadastrada" description="Adicione uma conta bancária para começar" />
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           {accounts.map(account => (
             <div key={account.id} className={`card p-4 ${account.status !== 'active' ? 'opacity-60' : ''} relative group`}>
               {/* Cabeçalho: ícone + nome + badges */}
-              <div className="flex items-center justify-between gap-2 mb-3">
+              <div className="flex items-start justify-between gap-2 mb-3">
                 <div className="flex items-center gap-2.5 min-w-0">
-                  <div className="size-8 rounded-xl bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center shrink-0">
+                  <div className="size-9 rounded-xl bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center shrink-0">
                     <Building2 className="size-4 text-blue-600 dark:text-blue-400" />
                   </div>
                   <div className="min-w-0">
-                    <p className="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate">{account.nickname}</p>
-                    <p className="text-xs text-gray-400 truncate">{account.bank_name}</p>
+                    <p className="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate leading-tight">{account.nickname}</p>
+                    <p className="text-xs text-gray-400 truncate leading-tight mt-0.5">{account.bank_name}</p>
                   </div>
                 </div>
-                <div className="flex items-center gap-1 shrink-0">
-                  {account.is_primary && <span className="badge bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400">Principal</span>}
-                  {account.status !== 'active' && <span className="badge bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400">Inativa</span>}
+                <div className="flex flex-col items-end gap-1 shrink-0">
+                  {account.is_primary && <span className="badge bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400 text-[10px] px-1.5 py-0.5">Principal</span>}
+                  {account.status !== 'active' && <span className="badge bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400 text-[10px] px-1.5 py-0.5">Inativa</span>}
                 </div>
               </div>
 
-              {/* Saldo + número da conta */}
-              <div className="flex items-end justify-between mb-3 px-0.5">
-                <div>
-                  <p className="text-[11px] text-gray-400 mb-0.5 uppercase tracking-wide">Saldo</p>
-                  <p className="text-xl font-bold text-gray-900 dark:text-gray-100">{formatCurrency(account.current_balance ?? 0)}</p>
-                </div>
+              {/* Saldo */}
+              <div className="mb-3 px-0.5">
+                <p className="text-[10px] text-gray-400 mb-0.5 uppercase tracking-wide font-medium">Saldo atual</p>
+                <p className="text-lg font-bold text-gray-900 dark:text-gray-100 leading-tight">{formatCurrency(account.current_balance ?? 0)}</p>
                 {account.account_number && (
-                  <p className="text-xs text-gray-400">Ag. {account.agency ?? '—'} · Cc. {account.account_number}</p>
+                  <p className="text-[10px] text-gray-400 mt-0.5">Ag. {account.agency ?? '—'} · Cc. {account.account_number}</p>
                 )}
               </div>
 
