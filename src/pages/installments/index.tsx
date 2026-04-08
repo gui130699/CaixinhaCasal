@@ -28,14 +28,17 @@ export default function InstallmentsPage() {
     enabled: !!family,
   })
 
-  const allPending = allInstallments.filter(i => i.status === 'pending' || i.status === 'overdue')
-  const allPaid = allInstallments.filter(i => i.status === 'paid')
-  const allOverdue = allInstallments.filter(i => i.status === 'overdue')
+  const activeInstallments = allInstallments.filter(i => i.goal?.status !== 'deleted')
+  const allPending = activeInstallments.filter(i => i.status === 'pending' || i.status === 'overdue')
+  const allPaid = activeInstallments.filter(i => i.status === 'paid')
+  const allOverdue = activeInstallments.filter(i => i.status === 'overdue')
   const pendingTotal = allPending.reduce((s, i) => s + i.expected_amount, 0)
   const paidTotal = allPaid.reduce((s, i) => s + i.paid_amount, 0)
   const overdueTotal = allOverdue.reduce((s, i) => s + i.expected_amount, 0)
 
-  const myInstallments = allInstallments.filter(i => i.user_id === user?.uid)
+  const myInstallments = allInstallments.filter(
+    i => i.user_id === user?.uid && i.goal?.status !== 'deleted'
+  )
 
   const goalMap = new Map<string, { goalName: string; installments: Installment[] }>()
   myInstallments.forEach(i => {
