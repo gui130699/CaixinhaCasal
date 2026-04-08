@@ -45,16 +45,6 @@ export default function ReportsPage() {
   const totalPending = pendingInstallments.reduce((s, i) => s + i.expected_amount, 0)
   const totalBalance = accounts.filter(a => a.status === 'active').reduce((s, a) => s + (a.current_balance ?? 0), 0)
 
-  // Contribuições por membro (parcelas pagas — apenas metas ativas)
-  const memberMap: Record<string, { name: string; pago: number; pendente: number }> = {}
-  activeInstallments.forEach(inst => {
-    const name = inst.profile?.full_name ?? 'Desconhecido'
-    if (!memberMap[name]) memberMap[name] = { name, pago: 0, pendente: 0 }
-    if (inst.status === 'paid') memberMap[name].pago += inst.paid_amount
-    else if (inst.status === 'pending' || inst.status === 'overdue') memberMap[name].pendente += inst.expected_amount
-  })
-  const memberData = Object.values(memberMap)
-
   return (
     <div className="space-y-6">
       <div>
@@ -98,36 +88,6 @@ export default function ReportsPage() {
                 </div>
               )
             })}
-          </div>
-        </Card>
-      )}
-
-      {/* Contribuições por membro */}
-      {memberData.length > 0 && (
-        <Card padding="md">
-          <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-4">Contribuições por Membro</h3>
-          <div className="space-y-3">
-            {memberData.map(m => (
-              <div key={m.name} className="flex items-center gap-3">
-                <div className="w-24 text-xs font-medium text-gray-700 dark:text-gray-300 truncate shrink-0">{m.name}</div>
-                <div className="flex-1 space-y-1">
-                  {m.pago > 0 && (
-                    <div className="flex items-center gap-2">
-                      <div className="w-2 h-2 rounded-full bg-green-500 shrink-0" />
-                      <span className="text-xs text-gray-500 w-14 shrink-0">Pago</span>
-                      <span className="text-xs font-semibold text-green-600">{formatCurrency(m.pago)}</span>
-                    </div>
-                  )}
-                  {m.pendente > 0 && (
-                    <div className="flex items-center gap-2">
-                      <div className="w-2 h-2 rounded-full bg-amber-500 shrink-0" />
-                      <span className="text-xs text-gray-500 w-14 shrink-0">Pendente</span>
-                      <span className="text-xs font-semibold text-amber-600">{formatCurrency(m.pendente)}</span>
-                    </div>
-                  )}
-                </div>
-              </div>
-            ))}
           </div>
         </Card>
       )}
