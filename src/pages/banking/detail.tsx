@@ -1,7 +1,6 @@
 import { useParams, Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { ArrowLeft, TrendingUp, TrendingDown, ArrowRightLeft } from 'lucide-react'
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import { bankAccountsApi } from '@/api/bank-accounts.api'
 import { transactionsApi } from '@/api/transactions.api'
 import { useAuthStore } from '@/stores/auth.store'
@@ -30,15 +29,6 @@ export default function BankingDetailPage() {
   const transactions = data?.data ?? []
 
   const incomingTypes = ['deposit', 'extra_deposit', 'interest', 'transfer_in']
-  // Build monthly chart data
-  const monthlyMap: Record<string, { entradas: number; saidas: number }> = {}
-  transactions.forEach(tx => {
-    const key = tx.transaction_date.slice(0, 7)
-    if (!monthlyMap[key]) monthlyMap[key] = { entradas: 0, saidas: 0 }
-    if (incomingTypes.includes(tx.type)) monthlyMap[key].entradas += tx.amount
-    else monthlyMap[key].saidas += tx.amount
-  })
-  const chartData = Object.entries(monthlyMap).sort(([a], [b]) => a.localeCompare(b)).slice(-6).map(([month, v]) => ({ month, ...v }))
 
   const income = transactions.filter(t => incomingTypes.includes(t.type)).reduce((s, t) => s + t.amount, 0)
   const expense = transactions.filter(t => !incomingTypes.includes(t.type)).reduce((s, t) => s + t.amount, 0)
@@ -76,22 +66,6 @@ export default function BankingDetailPage() {
           </Card>
         ))}
       </div>
-
-      <Card padding="md">
-        <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-4">Fluxo Mensal</h3>
-        <div className="h-52">
-          <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={chartData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-              <XAxis dataKey="month" tick={{ fontSize: 10 }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fontSize: 10 }} axisLine={false} tickLine={false} tickFormatter={v => `R$${v}`} />
-              <Tooltip formatter={(v: number) => [formatCurrency(v)]} />
-              <Area type="monotone" dataKey="entradas" stroke="#22c55e" strokeWidth={2} fill="#dcfce7" name="Entradas" />
-              <Area type="monotone" dataKey="saidas" stroke="#ef4444" strokeWidth={2} fill="#fee2e2" name="Saídas" />
-            </AreaChart>
-          </ResponsiveContainer>
-        </div>
-      </Card>
 
       <Card padding="none">
         <div className="p-5 border-b border-gray-100 dark:border-gray-800">
