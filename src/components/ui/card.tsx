@@ -63,11 +63,11 @@ export function StatCard({ title, value, subtitle, icon, trend, color = 'default
           <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide leading-tight">
             {title}
           </p>
-          <p className="mt-1.5 text-2xl font-bold text-gray-900 dark:text-gray-100 truncate">
+          <p className="mt-1.5 text-lg font-bold text-gray-900 dark:text-gray-100 leading-tight break-words">
             {value}
           </p>
           {subtitle && (
-            <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400 truncate">{subtitle}</p>
+            <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400 line-clamp-2 leading-tight">{subtitle}</p>
           )}
           {trend && (
             <p className={cn(
