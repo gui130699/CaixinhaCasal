@@ -170,7 +170,7 @@ export default function SettingsPage() {
                         {name}
                         {isYou && <span className="ml-1.5 text-xs text-primary-500 font-normal">(você)</span>}
                       </p>
-                      <p className="text-xs text-gray-400 truncate">{member.profile?.phone ?? ''}</p>
+                      <p className="text-xs text-gray-400 truncate">{member.profile?.email ?? ''}</p>
                     </div>
                     <span className={`flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium shrink-0 ${
                       member.role === 'admin'
