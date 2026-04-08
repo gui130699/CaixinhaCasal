@@ -174,7 +174,7 @@ export default function TransactionsPage() {
     enabled: !!family,
   })
 
-  const allTransactions = data?.data ?? []
+  const allTransactions = (data?.data ?? []).filter(t => !t.installment_id)
   const incomingTypes = ['deposit', 'transfer_in']
 
   const transactions = typeFilter === ''
