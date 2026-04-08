@@ -65,6 +65,18 @@ export const bankAccountsApi = {
   },
 
   async delete(id: string, familyId: string): Promise<void> {
+    // Bloqueia exclusão se houver metas ativas vinculadas a esta conta
+    const goalsSnap = await getDocs(
+      query(
+        collection(db, 'families', familyId, 'goals'),
+        where('bank_account_id', '==', id),
+        where('status', 'in', ['active'])
+      )
+    )
+    if (!goalsSnap.empty) {
+      const names = goalsSnap.docs.map(d => d.data().name).join(', ')
+      throw new Error(`Conta vinculada à(s) meta(s): ${names}. Troque a conta da meta ou exclua a meta antes de remover esta conta.`)
+    }
     await deleteDoc(doc(db, 'families', familyId, 'bankAccounts', id))
   },
 

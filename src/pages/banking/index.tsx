@@ -35,8 +35,8 @@ export default function BankingPage() {
       await bankAccountsApi.delete(deletingId, family!.id)
       queryClient.invalidateQueries({ queryKey: ['bank-accounts'] })
       toast('Conta removida', 'success')
-    } catch {
-      toast('Erro ao remover conta', 'error')
+    } catch (err: any) {
+      toast(err.message || 'Erro ao remover conta', 'error')
     } finally {
       setDeletingId(null)
     }
