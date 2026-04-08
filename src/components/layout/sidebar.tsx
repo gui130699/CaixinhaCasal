@@ -3,8 +3,8 @@ import { Fragment } from 'react'
 import { Dialog, Transition } from '@headlessui/react'
 import {
   LayoutDashboard, Target, Building2, CreditCard, ArrowLeftRight,
-  TrendingUp, BarChart3, Users, Settings, LogOut, X, PiggyBank,
-  Shield, FileText, Inbox
+  BarChart3, Users, Settings, LogOut, X, PiggyBank,
+  Shield, FileText, Inbox, History
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useAuthStore } from '@/stores/auth.store'
@@ -18,7 +18,7 @@ const navItems = [
   { to: '/banking', icon: Building2, label: 'Contas Bancárias' },
   { to: '/installments', icon: CreditCard, label: 'Parcelas' },
   { to: '/transactions', icon: ArrowLeftRight, label: 'Movimentações' },
-  { to: '/interest', icon: TrendingUp, label: 'Juros & Rendimentos' },
+  { to: '/history', icon: History, label: 'Histórico' },
   { to: '/reports', icon: BarChart3, label: 'Relatórios' },
   { to: '/settings', icon: Settings, label: 'Configurações' },
 ]

@@ -1,41 +1,33 @@
-import { useState } from 'react'
+﻿import { useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { CreditCard, CheckCircle2, AlertCircle, Clock, RotateCcw, Users } from 'lucide-react'
+import { CreditCard, CheckCircle2, AlertCircle, Clock, RotateCcw, ChevronDown, ChevronRight, Target } from 'lucide-react'
 import { installmentsApi } from '@/api/installments.api'
 import { useAuthStore } from '@/stores/auth.store'
-import { Card, StatCard } from '@/components/ui/card'
+import { StatCard } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { InstallmentStatusBadge } from '@/components/ui/badge'
 import { PageLoading, EmptyState } from '@/components/ui/empty-state'
 import { useToast } from '@/components/ui/toast'
 import { formatCurrency, formatDate, formatMonthYear } from '@/lib/utils'
-
-const STATUS_TABS = [
-  { label: 'Todos', value: '' },
-  { label: 'Pendentes', value: 'pending' },
-  { label: 'Pagos', value: 'paid' },
-  { label: 'Atrasados', value: 'overdue' },
-]
+import type { Installment } from '@/types'
 
 export default function InstallmentsPage() {
-  const { family, user } = useAuthStore()
+  const { family, user, familyRole, isMasterAdmin } = useAuthStore()
   const queryClient = useQueryClient()
   const { toast } = useToast()
-  const [statusFilter, setStatusFilter] = useState('')
-  // Quando não-nulo, exibe todos os membros filtrados por esse status (clique nos cards)
-  const [showAllStatus, setShowAllStatus] = useState<string | null>(null)
+  const isAdmin = familyRole === 'admin' || isMasterAdmin
+
+  const [expandedGoalIds, setExpandedGoalIds] = useState<Set<string>>(new Set())
   const [confirmingId, setConfirmingId] = useState<string | null>(null)
   const [undoConfirmId, setUndoConfirmId] = useState<string | null>(null)
   const [processingId, setProcessingId] = useState<string | null>(null)
 
-  // Busca todas as parcelas da família (para os totais dos cards)
   const { data: allInstallments = [], isLoading } = useQuery({
     queryKey: ['installments', family?.id],
     queryFn: () => installmentsApi.listByFamily(family!.id),
     enabled: !!family,
   })
 
-  // Totais usando TODOS os membros
   const allPending = allInstallments.filter(i => i.status === 'pending' || i.status === 'overdue')
   const allPaid = allInstallments.filter(i => i.status === 'paid')
   const allOverdue = allInstallments.filter(i => i.status === 'overdue')
@@ -43,30 +35,32 @@ export default function InstallmentsPage() {
   const paidTotal = allPaid.reduce((s, i) => s + i.paid_amount, 0)
   const overdueTotal = allOverdue.reduce((s, i) => s + i.expected_amount, 0)
 
-  // Lista exibida: se clicou em um card mostra todos os membros com aquele status,
-  // caso contrário mostra apenas as parcelas do usuário logado
   const myInstallments = allInstallments.filter(i => i.user_id === user?.uid)
 
-  const displayList = showAllStatus !== null
-    ? allInstallments.filter(i => {
-        if (showAllStatus === 'pending') return i.status === 'pending' || i.status === 'overdue'
-        return i.status === showAllStatus
-      })
-    : myInstallments.filter(i => {
-        if (!statusFilter) return true
-        return i.status === statusFilter
-      })
+  const goalMap = new Map<string, { goalName: string; installments: Installment[] }>()
+  myInstallments.forEach(i => {
+    if (!goalMap.has(i.goal_id)) {
+      goalMap.set(i.goal_id, { goalName: i.goal?.name ?? 'Meta', installments: [] })
+    }
+    goalMap.get(i.goal_id)!.installments.push(i)
+  })
+  const goalGroups = Array.from(goalMap.entries()).map(([goalId, data]) => ({ goalId, ...data }))
+  goalGroups.sort((a, b) => {
+    const priority = (g: typeof a) => {
+      if (g.installments.some(i => i.status === 'overdue')) return 0
+      if (g.installments.some(i => i.status === 'pending')) return 1
+      return 2
+    }
+    return priority(a) - priority(b)
+  })
 
-  const handleCardClick = (status: string) => {
-    setShowAllStatus(prev => prev === status ? null : status)
-    setStatusFilter('')
-    setConfirmingId(null)
-    setUndoConfirmId(null)
-  }
-
-  const handleTabClick = (value: string) => {
-    setStatusFilter(value)
-    setShowAllStatus(null)
+  const toggleGoal = (goalId: string) => {
+    setExpandedGoalIds(prev => {
+      const next = new Set(prev)
+      if (next.has(goalId)) next.delete(goalId)
+      else next.add(goalId)
+      return next
+    })
     setConfirmingId(null)
     setUndoConfirmId(null)
   }
@@ -88,23 +82,28 @@ export default function InstallmentsPage() {
     }
   }
 
-  const handleRequestUndo = async (installmentId: string) => {
+  const handleUndo = async (installmentId: string) => {
     const inst = allInstallments.find(i => i.id === installmentId)
     if (!inst) return
     setProcessingId(installmentId)
     try {
-      await installmentsApi.requestUndo(installmentId, family!.id, {
-        goal_id: inst.goal_id,
-        goal_name: inst.goal?.name ?? 'Meta',
-        user_id: inst.user_id,
-        reference_month: inst.reference_month,
-        amount: inst.paid_amount,
-      })
+      if (isAdmin) {
+        await installmentsApi.undoDirect(installmentId, family!.id)
+        toast('Pagamento desfeito com sucesso.', 'success')
+      } else {
+        await installmentsApi.requestUndo(installmentId, family!.id, {
+          goal_id: inst.goal_id,
+          goal_name: inst.goal?.name ?? 'Meta',
+          user_id: inst.user_id,
+          reference_month: inst.reference_month,
+          amount: inst.paid_amount,
+        })
+        toast('Solicitação de estorno enviada ao administrador.', 'success')
+      }
       queryClient.invalidateQueries({ queryKey: ['installments'] })
-      toast('Solicitação de estorno enviada ao administrador.', 'success')
       setUndoConfirmId(null)
     } catch (err: any) {
-      toast(err.message || 'Erro ao solicitar estorno', 'error')
+      toast(err.message || 'Erro', 'error')
     } finally {
       setProcessingId(null)
     }
@@ -119,171 +118,126 @@ export default function InstallmentsPage() {
         <p className="text-sm text-gray-500 dark:text-gray-400">Acompanhe e registre os pagamentos das metas</p>
       </div>
 
-      {/* Cards clicáveis: mostram totais de TODOS os membros; clique filtra a lista */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div onClick={() => handleCardClick('pending')} className="cursor-pointer">
-          <StatCard
-            title="A Pagar"
-            value={formatCurrency(pendingTotal)}
-            icon={<Clock className="size-5" />}
-            color={showAllStatus === 'pending' ? 'primary' : 'warning'}
-            subtitle={`${allPending.length} parcelas — todos`}
-          />
-        </div>
-        <div onClick={() => handleCardClick('paid')} className="cursor-pointer">
-          <StatCard
-            title="Pagas"
-            value={formatCurrency(paidTotal)}
-            icon={<CheckCircle2 className="size-5" />}
-            color={showAllStatus === 'paid' ? 'primary' : 'success'}
-            subtitle={`${allPaid.length} parcelas — todos`}
-          />
-        </div>
-        <div onClick={() => handleCardClick('overdue')} className="cursor-pointer">
-          <StatCard
-            title="Atrasadas"
-            value={formatCurrency(overdueTotal)}
-            icon={<AlertCircle className="size-5" />}
-            color={showAllStatus === 'overdue' ? 'primary' : 'danger'}
-            subtitle={`${allOverdue.length} parcelas — todos`}
-          />
-        </div>
+        <StatCard title="A Pagar" value={formatCurrency(pendingTotal)} icon={<Clock className="size-5" />} color="warning" subtitle={`${allPending.length} parcelas — todos`} />
+        <StatCard title="Pagas" value={formatCurrency(paidTotal)} icon={<CheckCircle2 className="size-5" />} color="success" subtitle={`${allPaid.length} parcelas — todos`} />
+        <StatCard title="Atrasadas" value={formatCurrency(overdueTotal)} icon={<AlertCircle className="size-5" />} color="danger" subtitle={`${allOverdue.length} parcelas — todos`} />
       </div>
 
-      <Card padding="none">
-        {/* Cabeçalho: tabs ou indicador de "todos os membros" */}
-        <div className="flex items-center justify-between gap-2 p-4 border-b border-gray-100 dark:border-gray-800 flex-wrap">
-          {showAllStatus ? (
-            <div className="flex items-center gap-2">
-              <span className="flex items-center gap-1.5 text-xs font-medium text-primary-700 dark:text-primary-400 bg-primary-50 dark:bg-primary-900/20 px-3 py-1.5 rounded-lg">
-                <Users className="size-3.5" />
-                Todos os membros •&nbsp;
-                {showAllStatus === 'pending' ? 'A Pagar' : showAllStatus === 'paid' ? 'Pagos' : 'Atrasados'}
-              </span>
-              <button
-                onClick={() => setShowAllStatus(null)}
-                className="text-xs text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 underline"
-              >
-                Ver apenas meus
-              </button>
-            </div>
-          ) : (
-            <div className="flex items-center gap-1 overflow-x-auto">
-              {STATUS_TABS.map(tab => (
+      {goalGroups.length === 0 ? (
+        <EmptyState icon={<CreditCard className="size-8" />} title="Nenhuma parcela encontrada" description="Você ainda não tem parcelas associadas a metas." />
+      ) : (
+        <div className="space-y-3">
+          {goalGroups.map(({ goalId, goalName, installments }) => {
+            const isExpanded = expandedGoalIds.has(goalId)
+            const pending = installments.filter(i => i.status === 'pending' || i.status === 'overdue')
+            const paid = installments.filter(i => i.status === 'paid')
+            const hasOverdue = installments.some(i => i.status === 'overdue')
+            const goalPendingTotal = pending.reduce((s, i) => s + i.expected_amount, 0)
+
+            return (
+              <div key={goalId} className="card overflow-hidden">
                 <button
-                  key={tab.value}
-                  onClick={() => handleTabClick(tab.value)}
-                  className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors whitespace-nowrap ${
-                    statusFilter === tab.value
-                      ? 'bg-primary-600 text-white'
-                      : 'text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800'
-                  }`}
+                  type="button"
+                  onClick={() => toggleGoal(goalId)}
+                  className="w-full flex items-center gap-3 p-4 text-left hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
                 >
-                  {tab.label}
-                </button>
-              ))}
-            </div>
-          )}
-          {!showAllStatus && (
-            <span className="text-[11px] text-gray-400 shrink-0">Apenas as minhas</span>
-          )}
-        </div>
-
-        {displayList.length === 0 ? (
-          <EmptyState icon={<CreditCard className="size-8" />} title="Nenhuma parcela encontrada" description="Ajuste os filtros ou aguarde o próximo mês" />
-        ) : (
-          <div className="divide-y divide-gray-50 dark:divide-gray-800">
-            {displayList.map(inst => {
-              const isConfirming = confirmingId === inst.id
-              const isUndoConfirming = undoConfirmId === inst.id
-              const isProcessing = processingId === inst.id
-              const isOwn = inst.user_id === user?.uid
-              const canPay = !showAllStatus && isOwn && (inst.status === 'pending' || inst.status === 'overdue')
-              const canUndo = !showAllStatus && isOwn && inst.status === 'paid'
-
-              return (
-                <div key={inst.id} className="px-4 py-3 space-y-2">
-                  {/* Linha principal: 2 linhas internas para não sobrepor */}
-                  <div className="flex items-start justify-between gap-3">
-                    {/* Coluna esquerda: nome da meta + info secundária */}
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate leading-snug">
-                        {inst.goal?.name ?? '—'}
-                      </p>
-                      <p className="text-xs text-gray-400 mt-0.5">
-                        {formatMonthYear(inst.reference_month)}
-                        {showAllStatus && inst.profile?.full_name && (
-                          <span className="text-primary-600 dark:text-primary-400"> · {inst.profile.full_name.split(' ')[0]}</span>
-                        )}
-                      </p>
-                      {inst.due_date && (
-                        <p className="text-[10px] text-gray-400">Vence {formatDate(inst.due_date)}</p>
-                      )}
-                    </div>
-
-                    {/* Coluna direita: valor + badge + ação — empilhados verticalmente */}
-                    <div className="flex flex-col items-end gap-1 shrink-0">
-                      {inst.status === 'paid' ? (
-                        <span className="text-sm font-bold text-green-600">{formatCurrency(inst.paid_amount)}</span>
-                      ) : (
-                        <span className="text-sm font-bold text-gray-900 dark:text-gray-100">{formatCurrency(inst.expected_amount)}</span>
-                      )}
-                      <div className="flex items-center gap-1.5">
-                        <InstallmentStatusBadge status={inst.status} />
-                        {canPay && !isConfirming && (
-                          <Button size="sm" variant="secondary" onClick={() => setConfirmingId(inst.id)}>
-                            Pagar
-                          </Button>
-                        )}
-                        {canUndo && !isUndoConfirming && (
-                          <button
-                            onClick={() => setUndoConfirmId(inst.id)}
-                            className="p-1.5 rounded-lg text-gray-400 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors"
-                            title="Solicitar estorno"
-                          >
-                            <RotateCcw className="size-3.5" />
-                          </button>
-                        )}
-                      </div>
-                    </div>
+                  <div className={`size-8 rounded-xl flex items-center justify-center shrink-0 ${hasOverdue ? 'bg-red-100 dark:bg-red-900/30' : 'bg-primary-100 dark:bg-primary-900/30'}`}>
+                    <Target className={`size-4 ${hasOverdue ? 'text-red-600 dark:text-red-400' : 'text-primary-600 dark:text-primary-400'}`} />
                   </div>
-
-                  {/* Confirmação de pagamento */}
-                  {isConfirming && (
-                    <div className="flex items-center gap-2 p-2 bg-primary-50 dark:bg-primary-900/20 rounded-xl border border-primary-200 dark:border-primary-800">
-                      <p className="text-xs text-primary-700 dark:text-primary-400 flex-1">
-                        Confirmar pagamento de <strong>{formatCurrency(inst.expected_amount)}</strong>?
-                      </p>
-                      <Button size="sm" loading={isProcessing} onClick={() => handlePay(inst.id, inst.expected_amount)}>
-                        Sim
-                      </Button>
-                      <Button size="sm" variant="ghost" disabled={isProcessing} onClick={() => setConfirmingId(null)}>
-                        Não
-                      </Button>
-                    </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate">{goalName}</p>
+                    <p className="text-xs text-gray-400">
+                      {pending.length > 0 && <span className={hasOverdue ? 'text-red-500' : 'text-amber-500'}>{pending.length} pendente{pending.length > 1 ? 's' : ''}</span>}
+                      {pending.length > 0 && paid.length > 0 && <span className="mx-1">·</span>}
+                      {paid.length > 0 && <span className="text-green-600">{paid.length} paga{paid.length > 1 ? 's' : ''}</span>}
+                    </p>
+                  </div>
+                  {pending.length > 0 && (
+                    <span className={`text-xs font-semibold shrink-0 ${hasOverdue ? 'text-red-600' : 'text-gray-700 dark:text-gray-300'}`}>
+                      {formatCurrency(goalPendingTotal)}
+                    </span>
                   )}
+                  {isExpanded ? <ChevronDown className="size-4 text-gray-400 shrink-0" /> : <ChevronRight className="size-4 text-gray-400 shrink-0" />}
+                </button>
 
-                  {/* Confirmação de estorno */}
-                  {isUndoConfirming && (
-                    <div className="flex items-center gap-2 p-2 bg-amber-50 dark:bg-amber-900/20 rounded-xl border border-amber-200 dark:border-amber-800">
-                      <p className="text-xs text-amber-700 dark:text-amber-400 flex-1">
-                        Solicitar estorno ao administrador?
-                      </p>
-                      <Button size="sm" variant="secondary" loading={isProcessing} onClick={() => handleRequestUndo(inst.id)}>
-                        Sim
-                      </Button>
-                      <Button size="sm" variant="ghost" disabled={isProcessing} onClick={() => setUndoConfirmId(null)}>
-                        Não
-                      </Button>
-                    </div>
-                  )}
-                </div>
-              )
-            })}
-          </div>
-        )}
-      </Card>
+                {isExpanded && (
+                  <div className="border-t border-gray-100 dark:border-gray-800 divide-y divide-gray-50 dark:divide-gray-800">
+                    {installments
+                      .sort((a, b) => a.due_date.localeCompare(b.due_date))
+                      .map(inst => {
+                        const isConfirming = confirmingId === inst.id
+                        const isUndoConfirming = undoConfirmId === inst.id
+                        const isProcessing = processingId === inst.id
+                        const canPay = inst.status === 'pending' || inst.status === 'overdue'
+                        const canUndo = inst.status === 'paid'
+
+                        return (
+                          <div key={inst.id} className="px-4 py-3 space-y-2">
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-medium text-gray-800 dark:text-gray-200">
+                                  {formatMonthYear(inst.reference_month)}
+                                </p>
+                                {inst.due_date && <p className="text-xs text-gray-400">Vence {formatDate(inst.due_date)}</p>}
+                                {inst.payment_date && inst.status === 'paid' && (
+                                  <p className="text-xs text-green-600">Pago em {formatDate(inst.payment_date)}</p>
+                                )}
+                              </div>
+                              <div className="flex flex-col items-end gap-1 shrink-0">
+                                {inst.status === 'paid'
+                                  ? <span className="text-sm font-bold text-green-600">{formatCurrency(inst.paid_amount)}</span>
+                                  : <span className="text-sm font-bold text-gray-900 dark:text-gray-100">{formatCurrency(inst.expected_amount)}</span>
+                                }
+                                <div className="flex items-center gap-1.5">
+                                  <InstallmentStatusBadge status={inst.status} />
+                                  {canPay && !isConfirming && (
+                                    <Button size="sm" variant="secondary" onClick={() => setConfirmingId(inst.id)}>
+                                      Pagar
+                                    </Button>
+                                  )}
+                                  {canUndo && !isUndoConfirming && (
+                                    <button
+                                      onClick={() => setUndoConfirmId(inst.id)}
+                                      className="p-1.5 rounded-lg text-gray-400 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors"
+                                      title={isAdmin ? 'Desfazer pagamento' : 'Solicitar estorno'}
+                                    >
+                                      <RotateCcw className="size-3.5" />
+                                    </button>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+
+                            {isConfirming && (
+                              <div className="flex items-center gap-2 p-2 bg-primary-50 dark:bg-primary-900/20 rounded-xl border border-primary-200 dark:border-primary-800">
+                                <p className="text-xs text-primary-700 dark:text-primary-400 flex-1">
+                                  Confirmar pagamento de <strong>{formatCurrency(inst.expected_amount)}</strong>?
+                                </p>
+                                <Button size="sm" loading={isProcessing} onClick={() => handlePay(inst.id, inst.expected_amount)}>Sim</Button>
+                                <Button size="sm" variant="ghost" disabled={isProcessing} onClick={() => setConfirmingId(null)}>Não</Button>
+                              </div>
+                            )}
+
+                            {isUndoConfirming && (
+                              <div className="flex items-center gap-2 p-2 bg-amber-50 dark:bg-amber-900/20 rounded-xl border border-amber-200 dark:border-amber-800">
+                                <p className="text-xs text-amber-700 dark:text-amber-400 flex-1">
+                                  {isAdmin ? 'Desfazer este pagamento?' : 'Solicitar estorno ao administrador?'}
+                                </p>
+                                <Button size="sm" variant="secondary" loading={isProcessing} onClick={() => handleUndo(inst.id)}>Sim</Button>
+                                <Button size="sm" variant="ghost" disabled={isProcessing} onClick={() => setUndoConfirmId(null)}>Não</Button>
+                              </div>
+                            )}
+                          </div>
+                        )
+                      })}
+                  </div>
+                )}
+              </div>
+            )
+          })}
+        </div>
+      )}
     </div>
   )
 }
-

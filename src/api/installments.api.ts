@@ -192,5 +192,59 @@ export const installmentsApi = {
       created_at: new Date().toISOString(),
     })
   },
+
+  /** Admin desfaz pagamento diretamente, sem criar solicitação */
+  async undoDirect(installmentId: string, familyId: string): Promise<void> {
+    const ref = doc(db, 'families', familyId, 'installments', installmentId)
+    const snap = await getDoc(ref)
+    if (!snap.exists()) throw new Error('Parcela não encontrada')
+    const current = snap.data() as Installment
+    const paidAmount = current.paid_amount ?? 0
+    const now = new Date().toISOString()
+
+    let bankAccountId: string | null = current.bank_account_id ?? null
+    let goalName: string | null = null
+    if (current.goal_id) {
+      const goalSnap = await getDoc(doc(db, 'families', familyId, 'goals', current.goal_id))
+      if (goalSnap.exists()) {
+        goalName = goalSnap.data().name ?? null
+        if (!bankAccountId) bankAccountId = goalSnap.data().bank_account_id ?? null
+      }
+    }
+
+    const batch = writeBatch(db)
+    batch.update(ref, {
+      status: 'pending',
+      paid_amount: 0,
+      payment_date: null,
+      payment_method: null,
+      updated_at: now,
+    })
+
+    if (bankAccountId && paidAmount > 0) {
+      const txRef = doc(collection(db, 'families', familyId, 'transactions'))
+      batch.set(txRef, {
+        family_id: familyId,
+        bank_account_id: bankAccountId,
+        type: 'withdrawal',
+        amount: paidAmount,
+        description: goalName
+          ? `Estorno parcela ${current.reference_month} — ${goalName}`
+          : `Estorno parcela ${current.reference_month}`,
+        transaction_date: now.substring(0, 10),
+        user_id: current.user_id,
+        created_by: current.user_id,
+        installment_id: installmentId,
+        goal_id: current.goal_id,
+        created_at: now,
+      })
+      batch.update(doc(db, 'families', familyId, 'bankAccounts', bankAccountId), {
+        current_balance: increment(-paidAmount),
+        updated_at: now,
+      })
+    }
+
+    await batch.commit()
+  },
 }
 

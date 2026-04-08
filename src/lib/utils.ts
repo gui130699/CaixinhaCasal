@@ -90,6 +90,7 @@ export const installmentStatusLabel: Record<InstallmentStatus, string> = {
   paid: 'Pago',
   overdue: 'Atrasado',
   compensated: 'Compensado',
+  cancelled: 'Cancelado',
 }
 
 export const installmentStatusColor: Record<InstallmentStatus, string> = {
@@ -98,6 +99,7 @@ export const installmentStatusColor: Record<InstallmentStatus, string> = {
   paid: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300',
   overdue: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300',
   compensated: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300',
+  cancelled: 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400',
 }
 
 export const goalStatusLabel: Record<GoalStatus, string> = {
@@ -105,6 +107,7 @@ export const goalStatusLabel: Record<GoalStatus, string> = {
   paused: 'Pausada',
   completed: 'Concluída',
   cancelled: 'Cancelada',
+  deleted: 'Excluída',
 }
 
 export const goalStatusColor: Record<GoalStatus, string> = {
@@ -112,6 +115,7 @@ export const goalStatusColor: Record<GoalStatus, string> = {
   paused: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300',
   completed: 'bg-primary-100 text-primary-800 dark:bg-primary-900/30 dark:text-primary-300',
   cancelled: 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400',
+  deleted: 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400',
 }
 
 export const accountTypeLabel: Record<AccountType, string> = {

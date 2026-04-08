@@ -7,9 +7,9 @@ export type FamilyStatus = 'active' | 'inactive'
 export type FamilyMemberRole = 'admin' | 'member'
 export type FamilyMemberStatus = 'active' | 'inactive'
 export type AccountType = 'checking' | 'savings' | 'investment' | 'wallet' | 'safe' | 'other'
-export type GoalStatus = 'active' | 'paused' | 'completed' | 'cancelled'
+export type GoalStatus = 'active' | 'paused' | 'completed' | 'cancelled' | 'deleted'
 export type CalculationMode = 'by_months' | 'by_installment'
-export type InstallmentStatus = 'pending' | 'partial' | 'paid' | 'overdue' | 'compensated'
+export type InstallmentStatus = 'pending' | 'partial' | 'paid' | 'overdue' | 'compensated' | 'cancelled'
 export type TransactionType =
   | 'deposit'
   | 'extra_deposit'
@@ -101,6 +101,7 @@ export interface Goal {
   calculation_mode: CalculationMode
   status: GoalStatus
   completed_at?: string | null
+  deleted_at?: string | null
   created_at: string
   updated_at: string
   // Joining

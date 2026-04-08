@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Plus, Target, Search, Pencil } from 'lucide-react'
+import { Plus, Target, Search, Pencil, Trash2 } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { useAuthStore } from '@/stores/auth.store'
 import { goalsApi } from '@/api/goals.api'
@@ -13,6 +13,7 @@ import { EmptyState } from '@/components/ui/empty-state'
 import { formatCurrency, formatDate, calculateProgress } from '@/lib/utils'
 import { CreateGoalModal } from './create-goal-modal'
 import { EditGoalModal } from './edit-goal-modal'
+import { useToast } from '@/components/ui/toast'
 import type { Goal, GoalStatus } from '@/types'
 
 const statusFilters: { label: string; value: GoalStatus | 'all' }[] = [
@@ -26,10 +27,13 @@ const statusFilters: { label: string; value: GoalStatus | 'all' }[] = [
 export default function GoalsPage() {
   const { family, familyRole, isMasterAdmin } = useAuthStore()
   const queryClient = useQueryClient()
+  const { toast } = useToast()
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState<GoalStatus | 'all'>('all')
   const [showCreate, setShowCreate] = useState(false)
   const [editGoal, setEditGoal] = useState<Goal | null>(null)
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
+  const [deletingId, setDeletingId] = useState<string | null>(null)
 
   const { data: goals = [], isLoading } = useQuery({
     queryKey: ['goals', family?.id],
@@ -39,7 +43,22 @@ export default function GoalsPage() {
 
   const canManage = familyRole === 'admin' || isMasterAdmin
 
+  const handleDeleteGoal = async (goalId: string) => {
+    setDeletingId(goalId)
+    try {
+      await goalsApi.softDelete(goalId, family!.id)
+      queryClient.invalidateQueries({ queryKey: ['goals', family?.id] })
+      toast('Meta excluída. Saldo bancário mantido.', 'success')
+    } catch (err: any) {
+      toast(err.message || 'Erro ao excluir meta', 'error')
+    } finally {
+      setDeletingId(null)
+      setConfirmDeleteId(null)
+    }
+  }
+
   const filtered = goals.filter(g => {
+    if (g.status === 'deleted') return false
     const matchStatus = statusFilter === 'all' || g.status === statusFilter
     const matchSearch = !search || g.name.toLowerCase().includes(search.toLowerCase())
     return matchStatus && matchSearch
@@ -122,6 +141,31 @@ export default function GoalsPage() {
                           <Pencil className="size-3.5" />
                         </button>
                       )}
+                      {canManage && confirmDeleteId === goal.id ? (
+                        <div className="flex items-center gap-1" onClick={e => { e.preventDefault(); e.stopPropagation() }}>
+                          <button
+                            onClick={() => handleDeleteGoal(goal.id)}
+                            disabled={deletingId === goal.id}
+                            className="text-[11px] px-2 py-1 rounded-lg bg-red-500 text-white hover:bg-red-600 disabled:opacity-50 font-medium"
+                          >
+                            {deletingId === goal.id ? '...' : 'Excluir'}
+                          </button>
+                          <button
+                            onClick={() => setConfirmDeleteId(null)}
+                            className="text-[11px] px-2 py-1 rounded-lg border border-gray-200 dark:border-gray-700 text-gray-500"
+                          >
+                            Cancelar
+                          </button>
+                        </div>
+                      ) : canManage ? (
+                        <button
+                          onClick={e => { e.preventDefault(); e.stopPropagation(); setConfirmDeleteId(goal.id) }}
+                          className="p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                          title="Excluir meta"
+                        >
+                          <Trash2 className="size-3.5" />
+                        </button>
+                      ) : null}
                     </div>
                   </div>
 

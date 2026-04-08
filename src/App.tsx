@@ -18,7 +18,7 @@ import BankingPage from '@/pages/banking'
 import BankingDetailPage from '@/pages/banking/detail'
 import InstallmentsPage from '@/pages/installments'
 import TransactionsPage from '@/pages/transactions'
-import InterestPage from '@/pages/interest'
+import HistoryPage from '@/pages/history'
 import ReportsPage from '@/pages/reports'
 import ProfilePage from '@/pages/profile'
 import SettingsPage from '@/pages/settings'
@@ -51,7 +51,7 @@ export default function App() {
             <Route path="banking/:id" element={<BankingDetailPage />} />
             <Route path="installments" element={<InstallmentsPage />} />
             <Route path="transactions" element={<TransactionsPage />} />
-            <Route path="interest" element={<InterestPage />} />
+            <Route path="history" element={<HistoryPage />} />
             <Route path="reports" element={<ReportsPage />} />
             <Route path="profile" element={<ProfilePage />} />
             <Route path="settings" element={<SettingsPage />} />

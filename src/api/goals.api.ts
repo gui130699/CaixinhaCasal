@@ -157,6 +157,26 @@ export const goalsApi = {
     await deleteDoc(doc(db, 'families', familyId, 'goals', id))
   },
 
+  /** Soft-delete: marca a meta como 'deleted' e cancela parcelas pendentes */
+  async softDelete(id: string, familyId: string): Promise<void> {
+    const now = new Date().toISOString()
+    // Marca a meta como deleted
+    await updateDoc(doc(db, 'families', familyId, 'goals', id), {
+      status: 'deleted',
+      deleted_at: now,
+      updated_at: now,
+    })
+    // Cancela parcelas pendentes/atrasadas (mantém as pagas para histórico)
+    const pendingSnap = await getDocs(
+      query(
+        collection(db, 'families', familyId, 'installments'),
+        where('goal_id', '==', id),
+        where('status', 'in', ['pending', 'overdue'])
+      )
+    )
+    await Promise.all(pendingSnap.docs.map(d => updateDoc(d.ref, { status: 'cancelled', updated_at: now })))
+  },
+
   async getMembers(goalId: string, familyId: string): Promise<GoalMember[]> {
     const snap = await getDocs(collection(db, 'families', familyId, 'goals', goalId, 'members'))
     return snap.docs.map(d => ({ id: d.id, ...d.data() })) as GoalMember[]
