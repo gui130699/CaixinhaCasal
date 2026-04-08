@@ -57,25 +57,29 @@ export function StatCard({ title, value, subtitle, icon, trend, color = 'default
   }
 
   return (
-    <Card className={cn('relative', className)}>
-      {icon && (
-        <div className={cn('absolute top-4 right-4 p-2 rounded-xl', colorMap[color])}>
-          {icon}
+    <Card className={className} padding="sm">
+      <div className="flex flex-col gap-1.5 min-w-0">
+        {/* Título + ícone na mesma linha */}
+        <div className="flex items-center justify-between gap-1 min-w-0">
+          <p className="text-[10px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide leading-tight truncate">
+            {title}
+          </p>
+          {icon && (
+            <div className={cn('p-1.5 rounded-lg shrink-0', colorMap[color])}>
+              <span className="[&>svg]:size-3.5">{icon}</span>
+            </div>
+          )}
         </div>
-      )}
-      <div className={cn('min-w-0', icon ? 'pr-12' : '')}>
-        <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide leading-tight">
-          {title}
-        </p>
-        <p className="mt-1.5 text-base font-bold text-gray-900 dark:text-gray-100 leading-tight">
+        {/* Valor ocupa largura total */}
+        <p className="text-base font-bold text-gray-900 dark:text-gray-100 leading-none whitespace-nowrap overflow-hidden text-ellipsis">
           {value}
         </p>
         {subtitle && (
-          <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400 leading-tight line-clamp-2">{subtitle}</p>
+          <p className="text-[10px] text-gray-500 dark:text-gray-400 leading-tight line-clamp-2">{subtitle}</p>
         )}
         {trend && (
           <p className={cn(
-            'mt-1 text-xs font-medium',
+            'text-[10px] font-medium',
             trend.value >= 0 ? 'text-green-600' : 'text-red-600'
           )}>
             {trend.value >= 0 ? '↑' : '↓'} {Math.abs(trend.value).toFixed(1)}%
