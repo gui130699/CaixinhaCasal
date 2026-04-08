@@ -53,13 +53,16 @@ export default function DashboardPage() {
 
   const isLoading = loadingAccounts || loadingGoals || loadingInstallments
 
+  const nonDeletedGoalIds = new Set(goals.filter(g => g.status !== 'deleted').map(g => g.id))
   const totalBalance = accounts.reduce((s, a) => s + (a.current_balance ?? 0), 0)
   const activeGoals = goals.filter(g => g.status === 'active')
   const totalTarget = activeGoals.reduce((s, g) => s + g.target_amount, 0)
   const totalSaved = activeGoals.reduce((s, g) => s + g.current_balance, 0)
-  const monthlyPaid = currentMonthInstallments.filter(i => i.status === 'paid').reduce((s, i) => s + i.paid_amount, 0)
-  const monthlyPending = currentMonthInstallments.filter(i => ['pending', 'partial', 'overdue'].includes(i.status)).reduce((s, i) => s + (i.expected_amount - i.paid_amount), 0)
-  const overdueAmount = overdueInstallments.reduce((s, i) => s + (i.expected_amount - i.paid_amount), 0)
+  const activeMonthInstallments = currentMonthInstallments.filter(i => nonDeletedGoalIds.has(i.goal_id))
+  const activeOverdueInstallments = overdueInstallments.filter(i => nonDeletedGoalIds.has(i.goal_id))
+  const monthlyPaid = activeMonthInstallments.filter(i => i.status === 'paid').reduce((s, i) => s + i.paid_amount, 0)
+  const monthlyPending = activeMonthInstallments.filter(i => ['pending', 'partial', 'overdue'].includes(i.status)).reduce((s, i) => s + (i.expected_amount - i.paid_amount), 0)
+  const overdueAmount = activeOverdueInstallments.reduce((s, i) => s + (i.expected_amount - i.paid_amount), 0)
 
   const greetingHour = new Date().getHours()
   const greeting = greetingHour < 12 ? 'Bom dia' : greetingHour < 18 ? 'Boa tarde' : 'Boa noite'
@@ -72,12 +75,12 @@ export default function DashboardPage() {
       />
 
       {/* Alertas de atraso */}
-      {overdueInstallments.length > 0 && (
+      {activeOverdueInstallments.length > 0 && (
         <div className="flex items-start gap-3 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-2xl">
           <AlertCircle className="size-5 text-red-500 shrink-0 mt-0.5" />
           <div className="flex-1">
             <p className="text-sm font-semibold text-red-700 dark:text-red-400">
-              {overdueInstallments.length} parcela{overdueInstallments.length > 1 ? 's' : ''} em atraso
+              {activeOverdueInstallments.length} parcela{activeOverdueInstallments.length > 1 ? 's' : ''} em atraso
             </p>
             <p className="text-xs text-red-600 dark:text-red-400 mt-0.5">
               Total em aberto: {formatCurrency(overdueAmount)}
@@ -110,7 +113,7 @@ export default function DashboardPage() {
         <StatCard
           title="Pago no Mês"
           value={formatCurrency(monthlyPaid)}
-          subtitle={`${currentMonthInstallments.filter(i => i.status === 'paid').length} parcelas pagas`}
+          subtitle={`${activeMonthInstallments.filter(i => i.status === 'paid').length} parcelas pagas`}
           icon={<CreditCard className="size-5" />}
           color="success"
           loading={isLoading}
@@ -118,7 +121,7 @@ export default function DashboardPage() {
         <StatCard
           title="Pendente no Mês"
           value={formatCurrency(monthlyPending)}
-          subtitle={overdueInstallments.length > 0 ? `${overdueInstallments.length} atrasadas` : 'em dia'}
+          subtitle={activeOverdueInstallments.length > 0 ? `${activeOverdueInstallments.length} atrasadas` : 'em dia'}
           icon={<Calendar className="size-5" />}
           color={monthlyPending > 0 ? 'warning' : 'default'}
           loading={isLoading}
@@ -203,11 +206,11 @@ export default function DashboardPage() {
               Ver todas <ArrowUpRight className="size-3" />
             </Link>
           </div>
-          {currentMonthInstallments.length === 0 ? (
+          {activeMonthInstallments.length === 0 ? (
             <p className="text-sm text-gray-400 text-center py-4">Nenhuma parcela no mês</p>
           ) : (
             <div className="space-y-2.5">
-              {currentMonthInstallments.slice(0, 4).map(inst => (
+              {activeMonthInstallments.slice(0, 4).map(inst => (
                 <div key={inst.id} className="flex items-center gap-2.5">
                   <div className="flex-1 min-w-0">
                     <p className="text-xs font-medium text-gray-900 dark:text-gray-100 truncate">
