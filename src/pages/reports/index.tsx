@@ -33,18 +33,21 @@ export default function ReportsPage() {
   const isLoading = loadingGoals || loadingInst || loadingAccounts
   if (isLoading) return <PageLoading />
 
+  const nonDeletedGoalIds = new Set(goals.filter(g => g.status !== 'deleted').map(g => g.id))
+  const activeInstallments = installments.filter(i => nonDeletedGoalIds.has(i.goal_id))
+
   const activeGoals = goals.filter(g => g.status === 'active')
-  const totalSaved = goals.reduce((s, g) => s + (g.current_balance ?? 0), 0)
+  const totalSaved = activeGoals.reduce((s, g) => s + (g.current_balance ?? 0), 0)
   const totalTarget = activeGoals.reduce((s, g) => s + (g.target_amount ?? 0), 0)
-  const paidInstallments = installments.filter(i => i.status === 'paid')
-  const pendingInstallments = installments.filter(i => i.status === 'pending' || i.status === 'overdue')
+  const paidInstallments = activeInstallments.filter(i => i.status === 'paid')
+  const pendingInstallments = activeInstallments.filter(i => i.status === 'pending' || i.status === 'overdue')
   const totalPaid = paidInstallments.reduce((s, i) => s + i.paid_amount, 0)
   const totalPending = pendingInstallments.reduce((s, i) => s + i.expected_amount, 0)
   const totalBalance = accounts.filter(a => a.status === 'active').reduce((s, a) => s + (a.current_balance ?? 0), 0)
 
-  // Contribuições por membro (parcelas pagas)
+  // Contribuições por membro (parcelas pagas — apenas metas ativas)
   const memberMap: Record<string, { name: string; pago: number; pendente: number }> = {}
-  installments.forEach(inst => {
+  activeInstallments.forEach(inst => {
     const name = inst.profile?.full_name ?? 'Desconhecido'
     if (!memberMap[name]) memberMap[name] = { name, pago: 0, pendente: 0 }
     if (inst.status === 'paid') memberMap[name].pago += inst.paid_amount
