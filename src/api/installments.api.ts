@@ -5,6 +5,8 @@
   getDocs,
   addDoc,
   updateDoc,
+  writeBatch,
+  increment,
   query,
   where,
   orderBy,
@@ -104,28 +106,68 @@ export const installmentsApi = {
     const newPaid = (current.paid_amount ?? 0) + form.paid_amount
     const expected = current.expected_amount ?? 0
     const status: Installment['status'] = newPaid >= expected ? 'paid' : newPaid > 0 ? 'partial' : 'pending'
-    await updateDoc(ref, {
+    const now = new Date().toISOString()
+
+    // Busca goal para obter bank_account_id e dados para a transação
+    let goalName: string | null = null
+    let bankAccountId: string | null = current.bank_account_id ?? null
+    let isOpenEnded = false
+    if (current.goal_id) {
+      const goalSnap = await getDoc(doc(db, 'families', familyId, 'goals', current.goal_id))
+      if (goalSnap.exists()) {
+        const g = goalSnap.data()
+        goalName = g.name ?? null
+        isOpenEnded = !!g.is_open_ended
+        if (!bankAccountId) bankAccountId = g.bank_account_id ?? null
+      }
+    }
+
+    // Batch atômico: atualiza parcela + cria transação + atualiza saldo do banco
+    const batch = writeBatch(db)
+    batch.update(ref, {
       paid_amount: newPaid,
       payment_date: form.payment_date,
       payment_method: form.payment_method ?? null,
       status,
-      updated_at: new Date().toISOString(),
+      updated_at: now,
     })
 
+    if (bankAccountId) {
+      const txRef = doc(collection(db, 'families', familyId, 'transactions'))
+      batch.set(txRef, {
+        family_id: familyId,
+        bank_account_id: bankAccountId,
+        type: 'deposit',
+        amount: form.paid_amount,
+        description: goalName
+          ? `Parcela ${current.reference_month} — ${goalName}`
+          : `Parcela ${current.reference_month}`,
+        transaction_date: form.payment_date,
+        user_id: current.user_id,
+        created_by: current.user_id,
+        installment_id: installmentId,
+        goal_id: current.goal_id,
+        created_at: now,
+      })
+      batch.update(doc(db, 'families', familyId, 'bankAccounts', bankAccountId), {
+        current_balance: increment(form.paid_amount),
+        updated_at: now,
+      })
+    }
+
+    await batch.commit()
+
     // Verificar se deve estender meta em aberto após última parcela paga
-    if (status === 'paid' && current.goal_id) {
-      const goalSnap = await getDoc(doc(db, 'families', familyId, 'goals', current.goal_id))
-      if (goalSnap.exists() && goalSnap.data().is_open_ended) {
-        const pendingSnap = await getDocs(
-          query(
-            collection(db, 'families', familyId, 'installments'),
-            where('goal_id', '==', current.goal_id),
-            where('status', 'in', ['pending', 'partial', 'overdue'])
-          )
+    if (status === 'paid' && isOpenEnded && current.goal_id) {
+      const pendingSnap = await getDocs(
+        query(
+          collection(db, 'families', familyId, 'installments'),
+          where('goal_id', '==', current.goal_id),
+          where('status', 'in', ['pending', 'partial', 'overdue'])
         )
-        if (pendingSnap.empty) {
-          await goalsApi.extendOpenEnded(current.goal_id, familyId)
-        }
+      )
+      if (pendingSnap.empty) {
+        await goalsApi.extendOpenEnded(current.goal_id, familyId)
       }
     }
   },

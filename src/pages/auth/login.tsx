@@ -94,6 +94,8 @@ export default function LoginPage() {
               label="E-mail"
               type="email"
               autoComplete="email"
+              autoCapitalize="none"
+              autoCorrect="off"
               placeholder="seu@email.com"
               error={errors.email?.message}
               required
