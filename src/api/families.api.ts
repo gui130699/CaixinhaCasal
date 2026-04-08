@@ -7,6 +7,7 @@ import {
   updateDoc,
   deleteDoc,
   setDoc,
+  writeBatch,
   query,
   where,
   orderBy,
@@ -86,7 +87,12 @@ export const familiesApi = {
   },
 
   async removeMember(familyId: string, userId: string): Promise<void> {
-    await updateDoc(doc(db, 'families', familyId, 'members', userId), { status: 'inactive' })
+    const batch = writeBatch(db)
+    // Marca membro como inativo
+    batch.update(doc(db, 'families', familyId, 'members', userId), { status: 'inactive' })
+    // Remove family_id do perfil para que o usuário vá para family-setup no próximo login
+    batch.update(doc(db, 'profiles', userId), { family_id: null })
+    await batch.commit()
   },
 
   async getUserFamily(userId: string): Promise<{ family: Family; role: string } | null> {

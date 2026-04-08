@@ -1,7 +1,7 @@
 import { useState } from 'react'
-import { Settings, Users, Copy, Check, RefreshCw, Clock, Sun, Moon, Bell, Shield, LogOut, Crown, UserCircle2 } from 'lucide-react'
+import { Settings, Users, Copy, Check, RefreshCw, Clock, Sun, Moon, Bell, Shield, LogOut, Crown, UserCircle2, UserX } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { familiesApi } from '@/api/families.api'
 import { authApi } from '@/api/auth.api'
 import { useAuthStore } from '@/stores/auth.store'
@@ -17,10 +17,13 @@ export default function SettingsPage() {
   const { theme, setTheme } = useUIStore()
   const { toast } = useToast()
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
 
   const [loadingCode, setLoadingCode] = useState(false)
   const [copied, setCopied] = useState(false)
   const [expiresInHours, setExpiresInHours] = useState(24)
+  const [confirmRemoveId, setConfirmRemoveId] = useState<string | null>(null)
+  const [removingId, setRemovingId] = useState<string | null>(null)
 
   const isAdmin = familyRole === 'admin'
 
@@ -58,6 +61,21 @@ export default function SettingsPage() {
   const handleLogout = async () => {
     await authApi.signOut()
     navigate('/login')
+  }
+
+  const handleRemoveMember = async (userId: string) => {
+    if (!family) return
+    setRemovingId(userId)
+    try {
+      await familiesApi.removeMember(family.id, userId)
+      queryClient.invalidateQueries({ queryKey: ['family-members', family.id] })
+      toast('Membro removido da família.', 'success')
+    } catch (err: any) {
+      toast(err.message || 'Erro ao remover membro', 'error')
+    } finally {
+      setRemovingId(null)
+      setConfirmRemoveId(null)
+    }
   }
 
   const expiryOptions = [
@@ -142,6 +160,8 @@ export default function SettingsPage() {
               .map(member => {
                 const name = member.profile?.full_name ?? 'Usuário'
                 const isYou = member.user_id === currentProfile?.id
+                const canRemove = isAdmin && !isYou && member.role !== 'admin'
+                const isConfirming = confirmRemoveId === member.user_id
                 return (
                   <div key={member.id} className="flex items-center gap-3">
                     <Avatar name={name} src={member.profile?.avatar_url} size="sm" />
@@ -160,6 +180,36 @@ export default function SettingsPage() {
                       {member.role === 'admin' ? <Crown className="size-3" /> : <UserCircle2 className="size-3" />}
                       {member.role === 'admin' ? 'Admin' : 'Membro'}
                     </span>
+                    {canRemove && (
+                      isConfirming ? (
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveMember(member.user_id)}
+                            disabled={removingId === member.user_id}
+                            className="text-xs px-2.5 py-1 rounded-lg bg-red-500 text-white hover:bg-red-600 disabled:opacity-50 font-medium"
+                          >
+                            {removingId === member.user_id ? '...' : 'Confirmar'}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setConfirmRemoveId(null)}
+                            className="text-xs px-2.5 py-1 rounded-lg border border-gray-200 dark:border-gray-700 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800"
+                          >
+                            Cancelar
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          title="Remover membro"
+                          onClick={() => setConfirmRemoveId(member.user_id)}
+                          className="p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors shrink-0"
+                        >
+                          <UserX className="size-4" />
+                        </button>
+                      )
+                    )}
                   </div>
                 )
               })}
