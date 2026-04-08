@@ -155,6 +155,13 @@ export const installmentsApi = {
       })
     }
 
+    if (current.goal_id) {
+      batch.update(doc(db, 'families', familyId, 'goals', current.goal_id), {
+        current_balance: increment(form.paid_amount),
+        updated_at: now,
+      })
+    }
+
     await batch.commit()
 
     // Verificar se deve estender meta em aberto após última parcela paga
@@ -239,6 +246,13 @@ export const installmentsApi = {
         created_at: now,
       })
       batch.update(doc(db, 'families', familyId, 'bankAccounts', bankAccountId), {
+        current_balance: increment(-paidAmount),
+        updated_at: now,
+      })
+    }
+
+    if (current.goal_id && paidAmount > 0) {
+      batch.update(doc(db, 'families', familyId, 'goals', current.goal_id), {
         current_balance: increment(-paidAmount),
         updated_at: now,
       })
