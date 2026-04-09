@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, type ReactNode } from 'react'
-import { useNavigate, useLocation } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { authApi } from '@/api/auth.api'
 import { profilesApi } from '@/api/profiles.api'
 import { familiesApi } from '@/api/families.api'
@@ -8,6 +8,13 @@ import type { User } from 'firebase/auth'
 
 const AuthContext = createContext<null>(null)
 
+const PUBLIC_PATHS = ['/login', '/register', '/family-setup', '/forgot-password', '/reset-password']
+
+// Lê o pathname atual do hash (HashRouter) — sempre fresco, sem stale closure
+function getCurrentPath(): string {
+  return window.location.hash.slice(1).split('?')[0] || '/'
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const {
     setUser, setProfile, setFamily,
@@ -15,7 +22,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   } = useAuthStore()
 
   const navigate = useNavigate()
-  const location = useLocation()
 
   useEffect(() => {
     const unsubscribe = authApi.onAuthStateChange(async (user: User | null) => {
@@ -24,7 +30,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         await loadUserData(user.uid)
       } else {
         reset()
-        const isPublic = ['/login', '/register', '/family-setup', '/forgot-password', '/reset-password'].includes(location.pathname)
+        const isPublic = PUBLIC_PATHS.includes(getCurrentPath())
         if (!isPublic) navigate('/login')
       }
     })
@@ -51,11 +57,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setFamily(familyData.family)
         setFamilyRole(familyData.role as 'admin' | 'member')
         // Se estava numa página pública, redireciona para o app
-        const isPublic = ['/login', '/register', '/forgot-password', '/reset-password'].includes(location.pathname)
-        if (isPublic) navigate('/')
+        if (PUBLIC_PATHS.includes(getCurrentPath())) navigate('/')
       } else {
         // Sem família — redireciona para configuração (exceto se já está lá)
-        if (location.pathname !== '/family-setup') navigate('/family-setup')
+        if (getCurrentPath() !== '/family-setup') navigate('/family-setup')
       }
       if (profile) await profilesApi.updateLastLogin(userId)
     } catch (err) {
