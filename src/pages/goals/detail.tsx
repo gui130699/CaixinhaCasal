@@ -1,16 +1,16 @@
 import { useParams, Link } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { ArrowLeft, Users, Building2, Calendar, TrendingUp, CreditCard } from 'lucide-react'
+import { ArrowLeft, Users, Building2, Calendar, TrendingUp } from 'lucide-react'
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import { goalsApi } from '@/api/goals.api'
 import { installmentsApi } from '@/api/installments.api'
 import { useAuthStore } from '@/stores/auth.store'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { GoalStatusBadge, InstallmentStatusBadge } from '@/components/ui/badge'
+import { GoalStatusBadge } from '@/components/ui/badge'
 import { Avatar } from '@/components/ui/avatar'
 import { PageLoading } from '@/components/ui/empty-state'
-import { formatCurrency, formatDate, formatMonthYear, calculateProgress } from '@/lib/utils'
+import { formatCurrency, formatDate, calculateProgress } from '@/lib/utils'
 
 export default function GoalDetailPage() {
   const { id } = useParams<{ id: string }>()
@@ -166,47 +166,6 @@ export default function GoalDetailPage() {
         </Card>
       </div>
 
-      {/* Installments table */}
-      <Card padding="none">
-        <div className="flex items-center justify-between p-5 border-b border-gray-100 dark:border-gray-800">
-          <div className="flex items-center gap-2">
-            <CreditCard className="size-4 text-gray-400" />
-            <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Cronograma de Parcelas</h3>
-          </div>
-          <span className="text-xs text-gray-400">{installments.length} parcelas</span>
-        </div>
-        <div className="table-container rounded-none border-0">
-          <table className="table-base">
-            <thead className="table-head">
-              <tr>
-                <th className="table-th">Mês</th>
-                <th className="table-th">Membro</th>
-                <th className="table-th">Previsto</th>
-                <th className="table-th">Pago</th>
-                <th className="table-th">Vencimento</th>
-                <th className="table-th">Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {installments.map(inst => (
-                <tr key={inst.id} className="table-row-hover">
-                  <td className="table-td font-medium">{formatMonthYear(inst.reference_month)}</td>
-                  <td className="table-td">
-                    <div className="flex items-center gap-2">
-                      <Avatar name={inst.profile?.full_name ?? 'U'} size="xs" />
-                      <span className="text-xs">{inst.profile?.full_name}</span>
-                    </div>
-                  </td>
-                  <td className="table-td">{formatCurrency(inst.expected_amount)}</td>
-                  <td className="table-td font-medium text-green-600">{formatCurrency(inst.paid_amount)}</td>
-                  <td className="table-td">{formatDate(inst.due_date)}</td>
-                  <td className="table-td"><InstallmentStatusBadge status={inst.status} /></td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </Card>
     </div>
   )
 }
