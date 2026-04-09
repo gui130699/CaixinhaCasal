@@ -34,8 +34,8 @@ export default function GoalDetailPage() {
   // Calcula a partir das parcelas para garantir valores corretos independente do Firestore
   const totalExpected = installments.reduce((s, i) => s + i.expected_amount, 0)
   const totalPaid = installments.reduce((s, i) => s + i.paid_amount, 0)
-  const totalRemaining = totalExpected - totalPaid
   const effectiveTarget = totalExpected > 0 ? totalExpected : (goal.target_amount > 0 ? goal.target_amount : goal.remaining_amount)
+  const totalRemaining = effectiveTarget - totalPaid
   const pct = effectiveTarget > 0 ? Math.min((totalPaid / effectiveTarget) * 100, 100) : 0
 
   // Dados do cronograma para o gráfico
