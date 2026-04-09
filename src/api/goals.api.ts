@@ -57,7 +57,17 @@ export const goalsApi = {
     const snap = await getDoc(doc(db, 'families', familyId, 'goals', id))
     if (!snap.exists()) return null
     const membersSnap = await getDocs(collection(db, 'families', familyId, 'goals', id, 'members'))
-    const goal_members = membersSnap.docs.map(d => ({ id: d.id, ...d.data() }))
+    const rawMembers = membersSnap.docs.map(d => ({ id: d.id, ...d.data() })) as any[]
+
+    // Enrich each member with their profile
+    const goal_members = await Promise.all(
+      rawMembers.map(async gm => {
+        const profileSnap = await getDoc(doc(db, 'profiles', gm.user_id))
+        const profile = profileSnap.exists() ? { id: profileSnap.id, ...profileSnap.data() } : null
+        return { ...gm, profile }
+      })
+    )
+
     return { id: snap.id, ...snap.data(), goal_members } as Goal
   },
 
