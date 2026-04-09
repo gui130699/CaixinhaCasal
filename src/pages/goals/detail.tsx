@@ -31,11 +31,13 @@ export default function GoalDetailPage() {
   if (isLoading) return <PageLoading />
   if (!goal) return <div className="text-center py-12">Meta não encontrada</div>
 
-  // Calcula a partir das parcelas para garantir valores corretos independente do Firestore
+  // Calcula a partir das parcelas + do Firestore — usa o maior valor entre as duas fontes
+  // (garante consistência mesmo que o goal.current_balance ou as parcelas estejam desatualizados)
+  const fromInstallments = installments.reduce((s, i) => s + i.paid_amount, 0)
+  const totalPaid = Math.max(fromInstallments, goal.current_balance ?? 0)
   const totalExpected = installments.reduce((s, i) => s + i.expected_amount, 0)
-  const totalPaid = installments.reduce((s, i) => s + i.paid_amount, 0)
-  const effectiveTarget = totalExpected > 0 ? totalExpected : (goal.target_amount > 0 ? goal.target_amount : goal.remaining_amount)
-  const totalRemaining = effectiveTarget - totalPaid
+  const effectiveTarget = totalExpected > 0 ? totalExpected : (goal.target_amount > 0 ? goal.target_amount : (goal.remaining_amount + totalPaid))
+  const totalRemaining = Math.max(0, effectiveTarget - totalPaid)
   const pct = effectiveTarget > 0 ? Math.min((totalPaid / effectiveTarget) * 100, 100) : 0
 
   // Dados do cronograma para o gráfico
