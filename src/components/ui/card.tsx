@@ -35,9 +35,10 @@ interface StatCardProps {
   color?: 'primary' | 'success' | 'warning' | 'danger' | 'default'
   loading?: boolean
   className?: string
+  onClick?: () => void
 }
 
-export function StatCard({ title, value, subtitle, icon, trend, color = 'default', loading, className }: StatCardProps) {
+export function StatCard({ title, value, subtitle, icon, trend, color = 'default', loading, className, onClick }: StatCardProps) {
   const colorMap = {
     primary: 'bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400',
     success: 'bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400',
@@ -57,7 +58,7 @@ export function StatCard({ title, value, subtitle, icon, trend, color = 'default
   }
 
   return (
-    <Card className={className} padding="sm">
+    <Card className={cn(onClick ? 'cursor-pointer hover:shadow-md transition-shadow' : '', className)} padding="sm" onClick={onClick}>
       <div className="flex flex-col gap-1.5 min-w-0">
         {/* Título + ícone na mesma linha */}
         <div className="flex items-center justify-between gap-1 min-w-0">

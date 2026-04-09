@@ -1,12 +1,14 @@
 ﻿import { useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { CreditCard, CheckCircle2, AlertCircle, Clock, RotateCcw, ChevronDown, ChevronRight, Target } from 'lucide-react'
+import { CreditCard, CheckCircle2, AlertCircle, Clock, RotateCcw, ChevronDown, ChevronRight, Target, X } from 'lucide-react'
 import { installmentsApi } from '@/api/installments.api'
 import { useAuthStore } from '@/stores/auth.store'
 import { StatCard } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { InstallmentStatusBadge } from '@/components/ui/badge'
+import { Avatar } from '@/components/ui/avatar'
 import { PageLoading, EmptyState } from '@/components/ui/empty-state'
+import { Modal } from '@/components/ui/modal'
 import { useToast } from '@/components/ui/toast'
 import { formatCurrency, formatDate, formatMonthYear } from '@/lib/utils'
 import type { Installment } from '@/types'
@@ -21,6 +23,7 @@ export default function InstallmentsPage() {
   const [confirmingId, setConfirmingId] = useState<string | null>(null)
   const [undoConfirmId, setUndoConfirmId] = useState<string | null>(null)
   const [processingId, setProcessingId] = useState<string | null>(null)
+  const [summaryModal, setSummaryModal] = useState<'pending' | 'paid' | 'overdue' | null>(null)
 
   const { data: allInstallments = [], isLoading } = useQuery({
     queryKey: ['installments', family?.id],
@@ -121,10 +124,10 @@ export default function InstallmentsPage() {
         <p className="text-sm text-gray-500 dark:text-gray-400">Acompanhe e registre os pagamentos das metas</p>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <StatCard title="A Pagar" value={formatCurrency(pendingTotal)} icon={<Clock className="size-5" />} color="warning" subtitle={`${allPending.length} parcelas — todos`} />
-        <StatCard title="Pagas" value={formatCurrency(paidTotal)} icon={<CheckCircle2 className="size-5" />} color="success" subtitle={`${allPaid.length} parcelas — todos`} />
-        <StatCard title="Atrasadas" value={formatCurrency(overdueTotal)} icon={<AlertCircle className="size-5" />} color="danger" subtitle={`${allOverdue.length} parcelas — todos`} />
+      <div className="grid grid-cols-3 gap-2">
+        <StatCard title="A Pagar" value={formatCurrency(pendingTotal)} icon={<Clock className="size-5" />} color="warning" subtitle={`${allPending.length} parcelas — todos`} onClick={() => setSummaryModal('pending')} />
+        <StatCard title="Pagas" value={formatCurrency(paidTotal)} icon={<CheckCircle2 className="size-5" />} color="success" subtitle={`${allPaid.length} parcelas — todos`} onClick={() => setSummaryModal('paid')} />
+        <StatCard title="Atrasadas" value={formatCurrency(overdueTotal)} icon={<AlertCircle className="size-5" />} color="danger" subtitle={`${allOverdue.length} parcelas — todos`} onClick={() => setSummaryModal('overdue')} />
       </div>
 
       {goalGroups.length === 0 ? (
@@ -241,6 +244,77 @@ export default function InstallmentsPage() {
           })}
         </div>
       )}
+
+      {/* Modal de resumo por status */}
+      {summaryModal && (() => {
+        const modalConfig = {
+          pending: { title: 'A Pagar', list: allPending, color: 'text-amber-600', amountFn: (i: Installment) => i.expected_amount },
+          paid:    { title: 'Pagas',   list: allPaid,    color: 'text-green-600',  amountFn: (i: Installment) => i.paid_amount },
+          overdue: { title: 'Atrasadas', list: allOverdue, color: 'text-red-600',  amountFn: (i: Installment) => i.expected_amount },
+        }[summaryModal]
+
+        // Agrupa por membro
+        const byMember = new Map<string, { name: string; avatar: string; items: Installment[] }>()
+        modalConfig.list.forEach(i => {
+          const uid = i.user_id
+          const name = i.profile?.full_name ?? 'Membro'
+          if (!byMember.has(uid)) byMember.set(uid, { name, avatar: name, items: [] })
+          byMember.get(uid)!.items.push(i)
+        })
+        const members = Array.from(byMember.values())
+
+        const total = modalConfig.list.reduce((s, i) => s + modalConfig.amountFn(i), 0)
+
+        return (
+          <Modal open onClose={() => setSummaryModal(null)} size="lg"
+            title={modalConfig.title}
+            description={`${modalConfig.list.length} parcela${modalConfig.list.length !== 1 ? 's' : ''} · Total: ${formatCurrency(total)}`}
+          >
+            {members.length === 0 ? (
+              <p className="text-center text-sm text-gray-400 py-6">Nenhuma parcela nesta categoria.</p>
+            ) : (
+              <div className="space-y-5 max-h-[60vh] overflow-y-auto pr-1">
+                {members.map(member => (
+                  <div key={member.name}>
+                    {/* Cabeçalho do membro */}
+                    <div className="flex items-center gap-2 mb-2">
+                      <Avatar name={member.avatar} size="sm" />
+                      <div>
+                        <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">{member.name}</p>
+                        <p className="text-xs text-gray-400">
+                          {member.items.length} parcela{member.items.length !== 1 ? 's' : ''} · {formatCurrency(member.items.reduce((s, i) => s + modalConfig.amountFn(i), 0))}
+                        </p>
+                      </div>
+                    </div>
+                    {/* Lista de parcelas */}
+                    <div className="rounded-xl border border-gray-100 dark:border-gray-800 divide-y divide-gray-50 dark:divide-gray-800 overflow-hidden">
+                      {member.items
+                        .sort((a, b) => a.due_date.localeCompare(b.due_date))
+                        .map(inst => (
+                          <div key={inst.id} className="flex items-center justify-between px-4 py-2.5 gap-3">
+                            <div className="min-w-0 flex-1">
+                              <p className="text-sm font-medium text-gray-800 dark:text-gray-200 truncate">{inst.goal?.name ?? '—'}</p>
+                              <p className="text-xs text-gray-400">{formatMonthYear(inst.reference_month)}{inst.due_date ? ` · Vence ${formatDate(inst.due_date)}` : ''}</p>
+                              {inst.payment_date && inst.status === 'paid' && (
+                                <p className="text-xs text-green-600">Pago em {formatDate(inst.payment_date)}</p>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-2 shrink-0">
+                              <InstallmentStatusBadge status={inst.status} />
+                              <span className={`text-sm font-bold ${modalConfig.color}`}>
+                                {formatCurrency(modalConfig.amountFn(inst))}
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </Modal>
+        )
+      })()}
     </div>
   )
 }
