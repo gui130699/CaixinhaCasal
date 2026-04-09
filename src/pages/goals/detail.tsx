@@ -1,7 +1,6 @@
 import { useParams, Link } from 'react-router-dom'
-import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useQuery } from '@tanstack/react-query'
 import { ArrowLeft, Users, Building2, Calendar, TrendingUp } from 'lucide-react'
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import { goalsApi } from '@/api/goals.api'
 import { installmentsApi } from '@/api/installments.api'
 import { useAuthStore } from '@/stores/auth.store'
@@ -39,13 +38,6 @@ export default function GoalDetailPage() {
   const effectiveTarget = totalExpected > 0 ? totalExpected : (goal.target_amount > 0 ? goal.target_amount : (goal.remaining_amount + totalPaid))
   const totalRemaining = Math.max(0, effectiveTarget - totalPaid)
   const pct = effectiveTarget > 0 ? Math.min((totalPaid / effectiveTarget) * 100, 100) : 0
-
-  // Dados do cronograma para o gráfico
-  const chartData = installments.slice(0, 12).map(inst => ({
-    month: formatDate(inst.reference_month, 'MMM/yy'),
-    previsto: inst.expected_amount,
-    pago: inst.paid_amount,
-  }))
 
   // Agrupar por membro
   const memberInstallments = goal.goal_members ?? []
@@ -128,43 +120,24 @@ export default function GoalDetailPage() {
         </div>
       </Card>
 
-      <div className="grid md:grid-cols-3 gap-4">
-        {/* Members */}
-        <Card padding="md" className="md:col-span-1">
-          <div className="flex items-center gap-2 mb-4">
-            <Users className="size-4 text-gray-400" />
-            <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Participantes</h3>
-          </div>
-          <div className="space-y-3">
-            {memberInstallments.map(gm => (
-              <div key={gm.id} className="flex items-center gap-3">
-                <Avatar name={gm.profile?.full_name ?? 'U'} size="sm" />
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs font-medium text-gray-900 dark:text-gray-100 truncate">{gm.profile?.full_name}</p>
-                  <p className="text-[10px] text-gray-400">{gm.participation_percent}% • {formatCurrency(gm.expected_monthly_amount)}/mês</p>
-                </div>
+      {/* Members */}
+      <Card padding="md">
+        <div className="flex items-center gap-2 mb-4">
+          <Users className="size-4 text-gray-400" />
+          <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Participantes</h3>
+        </div>
+        <div className="space-y-3">
+          {memberInstallments.map(gm => (
+            <div key={gm.id} className="flex items-center gap-3">
+              <Avatar name={gm.profile?.full_name ?? 'U'} size="sm" />
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-medium text-gray-900 dark:text-gray-100 truncate">{gm.profile?.full_name}</p>
+                <p className="text-[10px] text-gray-400">{gm.participation_percent}% • {formatCurrency(gm.expected_monthly_amount)}/mês</p>
               </div>
-            ))}
-          </div>
-        </Card>
-
-        {/* Chart */}
-        <Card padding="md" className="md:col-span-2">
-          <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-4">Evolução das Parcelas</h3>
-          <div className="h-52">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={chartData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                <XAxis dataKey="month" tick={{ fontSize: 10 }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fontSize: 10 }} axisLine={false} tickLine={false} tickFormatter={v => `R$${v}`} />
-                <Tooltip formatter={(v: number) => [formatCurrency(v)]} />
-                <Area type="monotone" dataKey="previsto" stroke="#e5e7eb" strokeWidth={2} fill="#f9fafb" name="Previsto" />
-                <Area type="monotone" dataKey="pago" stroke="#4f46e5" strokeWidth={2} fill="#eef2ff" name="Pago" />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
-        </Card>
-      </div>
+            </div>
+          ))}
+        </div>
+      </Card>
 
     </div>
   )
