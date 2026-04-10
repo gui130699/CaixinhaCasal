@@ -1,7 +1,8 @@
 import { useQuery } from '@tanstack/react-query'
+import { useState } from 'react'
 import {
   Wallet, Target, AlertCircle, CreditCard,
-  ArrowUpRight, Building2, Calendar, RefreshCw
+  ArrowUpRight, Building2, Calendar, RefreshCw, ChevronDown
 } from 'lucide-react'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
@@ -18,6 +19,7 @@ import { Link } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 
 export default function DashboardPage() {
+  const [showRecentTx, setShowRecentTx] = useState(false)
   const { profile, family } = useAuthStore()
   const familyId = family?.id ?? ''
 
@@ -232,13 +234,23 @@ export default function DashboardPage() {
 
       {/* Últimas movimentações */}
       <div className="card">
-        <div className="flex items-center justify-between p-5 border-b border-gray-100 dark:border-gray-800">
+        <button
+          onClick={() => setShowRecentTx(v => !v)}
+          className="flex items-center justify-between w-full p-5 text-left"
+        >
           <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Movimentações Recentes</h3>
-          <Link to="/transactions" className="text-xs text-primary-600 hover:underline flex items-center gap-1">
-            Ver todas <ArrowUpRight className="size-3" />
-          </Link>
-        </div>
-        <div className="divide-y divide-gray-50 dark:divide-gray-800/50">
+          <div className="flex items-center gap-3">
+            <Link
+              to="/transactions"
+              onClick={e => e.stopPropagation()}
+              className="text-xs text-primary-600 hover:underline flex items-center gap-1"
+            >
+              Ver todas <ArrowUpRight className="size-3" />
+            </Link>
+            <ChevronDown className={`size-4 text-gray-400 transition-transform ${showRecentTx ? 'rotate-180' : ''}`} />
+          </div>
+        </button>
+        {showRecentTx && <div className="divide-y divide-gray-50 dark:divide-gray-800/50 border-t border-gray-100 dark:border-gray-800">
           {recentTransactions.length === 0 ? (
             <p className="text-sm text-gray-400 text-center py-8">Nenhuma movimentação</p>
           ) : (
@@ -268,7 +280,7 @@ export default function DashboardPage() {
               </div>
             ))
           )}
-        </div>
+        </div>}
       </div>
     </div>
   )
