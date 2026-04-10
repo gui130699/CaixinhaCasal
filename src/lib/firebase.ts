@@ -2,6 +2,7 @@ import { initializeApp } from 'firebase/app'
 import { getAuth, browserLocalPersistence, setPersistence } from 'firebase/auth'
 import { getFirestore } from 'firebase/firestore'
 import { getStorage } from 'firebase/storage'
+import { getMessaging, isSupported } from 'firebase/messaging'
 
 const firebaseConfig = {
   apiKey: 'AIzaSyB8x4jO56mL_AF2qnlmatTL7Y2cdj24028',
@@ -20,3 +21,6 @@ export const storage = getStorage(app)
 
 // Força localStorage em vez de IndexedDB para compatibilidade com iOS PWA standalone
 setPersistence(auth, browserLocalPersistence).catch(() => {})
+
+// Firebase Messaging — só disponível em contextos que suportam SW
+export const messagingPromise = isSupported().then(ok => ok ? getMessaging(app) : null)

@@ -1,0 +1,27 @@
+name: Notificar Parcelas Vencidas
+
+on:
+  schedule:
+    # Todo dia às 11:00 UTC = 08:00 BRT
+    - cron: '0 11 * * *'
+  workflow_dispatch: # permite disparar manualmente pelo GitHub
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Instalar firebase-admin
+        run: npm install firebase-admin --no-save
+
+      - name: Executar script de notificações
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          FIREBASE_PROJECT_ID: caixinha-casal
+        run: node scripts/notify-overdue.mjs

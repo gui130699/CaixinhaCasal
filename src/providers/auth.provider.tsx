@@ -5,6 +5,7 @@ import { profilesApi } from '@/api/profiles.api'
 import { familiesApi } from '@/api/families.api'
 import { useAuthStore } from '@/stores/auth.store'
 import { requestNotificationPermission, checkAndNotifyOverdueInstallments } from '@/lib/notifications'
+import { registerFCMToken } from '@/lib/fcm'
 import type { User } from 'firebase/auth'
 
 const AuthContext = createContext<null>(null)
@@ -63,6 +64,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const granted = await requestNotificationPermission()
         if (granted) {
           checkAndNotifyOverdueInstallments(familyData.family.id, userId).catch(() => {})
+          registerFCMToken(userId, familyData.family.id).catch(() => {})
         }
       } else {
         // Sem família — redireciona para configuração (exceto se já está lá)
