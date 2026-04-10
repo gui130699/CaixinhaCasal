@@ -67,9 +67,6 @@ async function sendNotification(installment: Installment) {
   markNotified(installment.id)
 }
 
-export async function sendTestNotification() {
-  await showNotification('Caixinha Casal 💰', 'Teste de notificação funcionando!')
-}
 
 export async function checkAndNotifyOverdueInstallments(
   familyId: string,
