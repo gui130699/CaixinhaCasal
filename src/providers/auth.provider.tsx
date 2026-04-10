@@ -4,6 +4,7 @@ import { authApi } from '@/api/auth.api'
 import { profilesApi } from '@/api/profiles.api'
 import { familiesApi } from '@/api/families.api'
 import { useAuthStore } from '@/stores/auth.store'
+import { requestNotificationPermission, checkAndNotifyOverdueInstallments } from '@/lib/notifications'
 import type { User } from 'firebase/auth'
 
 const AuthContext = createContext<null>(null)
@@ -58,6 +59,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setFamilyRole(familyData.role as 'admin' | 'member')
         // Se estava numa página pública, redireciona para o app
         if (PUBLIC_PATHS.includes(getCurrentPath())) navigate('/')
+        // Pede permissão e verifica parcelas vencidas
+        const granted = await requestNotificationPermission()
+        if (granted) {
+          checkAndNotifyOverdueInstallments(familyData.family.id, userId).catch(() => {})
+        }
       } else {
         // Sem família — redireciona para configuração (exceto se já está lá)
         if (getCurrentPath() !== '/family-setup') navigate('/family-setup')
