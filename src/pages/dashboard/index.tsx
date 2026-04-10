@@ -84,10 +84,10 @@ export default function DashboardPage() {
         onClick={async () => {
           const granted = await requestNotificationPermission()
           if (!granted) { alert('Permissão negada'); return }
-          // Limpa cache para forçar disparo mesmo que já notificado hoje
-          localStorage.removeItem('notified_installments')
-          await checkAndNotifyOverdueInstallments(familyId, profile?.id ?? '')
-          alert('Verificação concluída! Se há parcelas vencidas, a notificação deve aparecer.')
+          new Notification('Caixinha Casal 💰', {
+            body: 'Teste de notificação funcionando!',
+            icon: '/CaixinhaCasal/icons/icon-192x192.png',
+          })
         }}
       >
         🔔 Testar Notificação
