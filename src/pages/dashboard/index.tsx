@@ -17,6 +17,7 @@ import { InstallmentStatusBadge } from '@/components/ui/badge'
 import { formatCurrency, formatDate, calculateProgress, transactionTypeLabel } from '@/lib/utils'
 import { Link } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
+import { requestNotificationPermission, checkAndNotifyOverdueInstallments } from '@/lib/notifications'
 
 export default function DashboardPage() {
   const [showRecentTx, setShowRecentTx] = useState(false)
@@ -75,6 +76,22 @@ export default function DashboardPage() {
         title={`${greeting}, ${profile?.full_name?.split(' ')[0] ?? 'você'}!`}
         description={`Família ${family?.name ?? ''} • ${format(new Date(), "EEEE, d 'de' MMMM 'de' yyyy", { locale: ptBR })}`}
       />
+
+      {/* TODO: remover — botão de teste de notificação */}
+      <Button
+        variant="secondary"
+        size="sm"
+        onClick={async () => {
+          const granted = await requestNotificationPermission()
+          if (!granted) { alert('Permissão negada'); return }
+          // Limpa cache para forçar disparo mesmo que já notificado hoje
+          localStorage.removeItem('notified_installments')
+          await checkAndNotifyOverdueInstallments(familyId, profile?.id ?? '')
+          alert('Verificação concluída! Se há parcelas vencidas, a notificação deve aparecer.')
+        }}
+      >
+        🔔 Testar Notificação
+      </Button>
 
       {/* Alertas de atraso */}
       {activeOverdueInstallments.length > 0 && (
