@@ -17,7 +17,7 @@ import { InstallmentStatusBadge } from '@/components/ui/badge'
 import { formatCurrency, formatDate, calculateProgress, transactionTypeLabel } from '@/lib/utils'
 import { Link } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
-import { requestNotificationPermission, checkAndNotifyOverdueInstallments } from '@/lib/notifications'
+import { requestNotificationPermission, checkAndNotifyOverdueInstallments, sendTestNotification } from '@/lib/notifications'
 
 export default function DashboardPage() {
   const [showRecentTx, setShowRecentTx] = useState(false)
@@ -84,10 +84,7 @@ export default function DashboardPage() {
         onClick={async () => {
           const granted = await requestNotificationPermission()
           if (!granted) { alert('Permissão negada'); return }
-          new Notification('Caixinha Casal 💰', {
-            body: 'Teste de notificação funcionando!',
-            icon: '/CaixinhaCasal/icons/icon-192x192.png',
-          })
+          await sendTestNotification()
         }}
       >
         🔔 Testar Notificação

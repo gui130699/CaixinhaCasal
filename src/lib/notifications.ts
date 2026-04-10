@@ -31,6 +31,8 @@ function markNotified(id: string) {
   saveNotified(map)
 }
 
+const ICON = '/CaixinhaCasal/icons/pwa-192x192.png'
+
 export async function requestNotificationPermission(): Promise<boolean> {
   if (!('Notification' in window)) return false
   if (Notification.permission === 'granted') return true
@@ -39,34 +41,34 @@ export async function requestNotificationPermission(): Promise<boolean> {
   return result === 'granted'
 }
 
-function sendNotification(installment: Installment) {
+/** Dispara uma notificação via Service Worker (iOS PWA) ou diretamente */
+async function showNotification(title: string, body: string, tag?: string) {
+  const opts: NotificationOptions = { body, icon: ICON, badge: ICON, tag }
+  if ('serviceWorker' in navigator) {
+    const reg = await navigator.serviceWorker.ready
+    await reg.showNotification(title, opts)
+  } else {
+    new Notification(title, opts)
+  }
+}
+
+async function sendNotification(installment: Installment) {
   const goalName = installment.goal?.name ?? 'Meta'
   const due = new Date(installment.due_date + 'T00:00:00')
   const today = new Date()
   today.setHours(0, 0, 0, 0)
   const diffDays = Math.round((today.getTime() - due.getTime()) / MS_PER_DAY)
 
-  let body: string
-  if (diffDays === 0) {
-    body = `Parcela de ${goalName} vence hoje!`
-  } else {
-    body = `Parcela de ${goalName} está vencida há ${diffDays} dia${diffDays > 1 ? 's' : ''}.`
-  }
+  const body = diffDays === 0
+    ? `Parcela de ${goalName} vence hoje!`
+    : `Parcela de ${goalName} está vencida há ${diffDays} dia${diffDays > 1 ? 's' : ''}.`
 
-  const n = new Notification('Caixinha Casal 💰', {
-    body,
-    icon: '/CaixinhaCasal/icons/icon-192x192.png',
-    badge: '/CaixinhaCasal/icons/icon-192x192.png',
-    tag: installment.id, // evita duplicatas no sistema operacional
-  })
-
-  // Clicar na notificação abre o app
-  n.onclick = () => {
-    window.focus()
-    n.close()
-  }
-
+  await showNotification('Caixinha Casal 💰', body, installment.id)
   markNotified(installment.id)
+}
+
+export async function sendTestNotification() {
+  await showNotification('Caixinha Casal 💰', 'Teste de notificação funcionando!')
 }
 
 export async function checkAndNotifyOverdueInstallments(
