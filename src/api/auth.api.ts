@@ -29,8 +29,7 @@ export const authApi = {
   },
 
   async sendPasswordReset(email: string) {
-    const actionCodeSettings = { url: `${window.location.origin}/login` }
-    await sendPasswordResetEmail(auth, email, actionCodeSettings)
+    await sendPasswordResetEmail(auth, email)
   },
 
   async updatePassword(newPassword: string) {
