@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { Plus, ArrowUpCircle, ArrowDownCircle, ArrowRightLeft } from 'lucide-react'
+import { Plus, ArrowUpCircle, ArrowDownCircle, ArrowRightLeft, Building2, User, Calendar, FileText, Target, X } from 'lucide-react'
 import { transactionsApi } from '@/api/transactions.api'
 import { bankAccountsApi } from '@/api/bank-accounts.api'
 import { useAuthStore } from '@/stores/auth.store'
@@ -15,6 +15,7 @@ import { Input, CurrencyInput, Select, Textarea } from '@/components/ui/input'
 import { PageLoading, EmptyState } from '@/components/ui/empty-state'
 import { useToast } from '@/components/ui/toast'
 import { formatCurrency, formatDate, transactionTypeLabel } from '@/lib/utils'
+import type { Transaction } from '@/types'
 
 const TYPE_TABS = [
   { label: 'Todos', value: '' },
@@ -166,6 +167,7 @@ export default function TransactionsPage() {
   const { family } = useAuthStore()
   const [typeFilter, setTypeFilter] = useState('')
   const [showCreate, setShowCreate] = useState(false)
+  const [selectedTx, setSelectedTx] = useState<Transaction | null>(null)
 
   const { data, isLoading } = useQuery({
     queryKey: ['transactions', family?.id],
@@ -221,7 +223,10 @@ export default function TransactionsPage() {
               const isIn = incomingTypes.includes(tx.type)
               const isTransfer = tx.type === 'transfer_in' || tx.type === 'transfer_out'
               return (
-                <div key={tx.id} className="flex items-center gap-3 px-5 py-4">
+                <div key={tx.id}
+                  onClick={() => setSelectedTx(tx)}
+                  className="flex items-center gap-3 px-5 py-4 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
+                >
                   <div className={`size-9 rounded-full flex items-center justify-center shrink-0 ${
                     isTransfer ? 'bg-blue-100 dark:bg-blue-900/30' : isIn ? 'bg-green-100 dark:bg-green-900/30' : 'bg-red-100 dark:bg-red-900/30'
                   }`}>
@@ -257,6 +262,86 @@ export default function TransactionsPage() {
       </Card>
 
       <CreateTransactionModal open={showCreate} onClose={() => setShowCreate(false)} />
+
+      {/* Modal de detalhe da transação */}
+      {selectedTx && (() => {
+        const tx = selectedTx
+        const isIn = incomingTypes.includes(tx.type)
+        const isTransfer = tx.type === 'transfer_in' || tx.type === 'transfer_out'
+        const colorCls = isTransfer ? 'text-blue-600' : isIn ? 'text-green-600' : 'text-red-500'
+        const bgCls = isTransfer ? 'bg-blue-100 dark:bg-blue-900/30' : isIn ? 'bg-green-100 dark:bg-green-900/30' : 'bg-red-100 dark:bg-red-900/30'
+
+        const rows: { icon: React.ReactNode; label: string; value: React.ReactNode }[] = [
+          {
+            icon: <Calendar className="size-4 text-gray-400" />,
+            label: 'Data',
+            value: formatDate(tx.transaction_date),
+          },
+          {
+            icon: <ArrowRightLeft className="size-4 text-gray-400" />,
+            label: 'Tipo',
+            value: transactionTypeLabel[tx.type],
+          },
+          ...(tx.bank_account ? [{
+            icon: <Building2 className="size-4 text-gray-400" />,
+            label: 'Conta',
+            value: tx.bank_account.nickname,
+          }] : []),
+          ...(tx.profile ? [{
+            icon: <User className="size-4 text-gray-400" />,
+            label: 'Membro',
+            value: (
+              <div className="flex items-center gap-2">
+                <Avatar name={tx.profile.full_name} size="xs" />
+                <span>{tx.profile.full_name}</span>
+              </div>
+            ),
+          }] : []),
+          ...(tx.goal ? [{
+            icon: <Target className="size-4 text-gray-400" />,
+            label: 'Meta',
+            value: tx.goal.name,
+          }] : []),
+          ...(tx.notes ? [{
+            icon: <FileText className="size-4 text-gray-400" />,
+            label: 'Observações',
+            value: tx.notes,
+          }] : []),
+        ]
+
+        return (
+          <Modal open onClose={() => setSelectedTx(null)} size="sm">
+            {/* Cabeçalho visual */}
+            <div className="flex flex-col items-center pt-2 pb-5 border-b border-gray-100 dark:border-gray-800 -mx-5 px-5">
+              <div className={`size-12 rounded-full flex items-center justify-center mb-3 ${bgCls}`}>
+                {isTransfer
+                  ? <ArrowRightLeft className="size-5 text-blue-600" />
+                  : isIn
+                    ? <ArrowUpCircle className="size-5 text-green-600" />
+                    : <ArrowDownCircle className="size-5 text-red-500" />}
+              </div>
+              <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">{transactionTypeLabel[tx.type]}</p>
+              <p className={`text-2xl font-bold ${colorCls}`}>
+                {isIn ? '+' : '-'}{formatCurrency(tx.amount)}
+              </p>
+              <p className="text-sm text-gray-600 dark:text-gray-300 mt-1 text-center">{tx.description}</p>
+            </div>
+
+            {/* Detalhes */}
+            <div className="space-y-3 pt-4">
+              {rows.map((row, i) => (
+                <div key={i} className="flex items-start gap-3">
+                  <div className="mt-0.5 shrink-0">{row.icon}</div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[10px] text-gray-400 uppercase tracking-wide">{row.label}</p>
+                    <div className="text-sm font-medium text-gray-900 dark:text-gray-100">{row.value}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </Modal>
+        )
+      })()}
     </div>
   )
 }
